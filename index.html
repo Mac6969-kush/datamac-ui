@@ -1,0 +1,2272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>DataMac</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{--nav:#0f2a44;--accent:#00a19c;--bg:#f4f6f8;--shadow:0 1px 2px rgba(0,0,0,.05)}
+*{box-sizing:border-box}
+
+/* Requested font */
+body{
+  margin:0;
+  font-family:"Times New Roman", Times, serif;
+  display:flex;height:100vh;background:var(--bg)
+}
+
+/* ---------- SIDEBAR ---------- */
+.sidebar{width:260px;background:var(--nav);color:#fff;padding:26px 20px;position:relative}
+.brand{font-size:24px;margin-bottom:22px;font-weight:700} /* DataMac bold */
+
+/* Samsung-inspired slide menu feel */
+.nav-button{
+  width:100%;
+  background:none;border:none;color:#fff;
+  padding:12px 0;
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;
+  font-size:14px;
+  letter-spacing:.2px;
+}
+.nav-left{display:flex;align-items:center;gap:10px}
+.nav-ic{
+  width:28px;height:28px;border-radius:10px;
+  background:rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;
+}
+.nav-arrow{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:10px;
+  background:rgba(255,255,255,.08);
+  transition:transform .35s cubic-bezier(.2,.9,.2,1);
+}
+.nav-button[aria-expanded="true"] .nav-arrow{transform:rotate(90deg)}
+
+/* Submenu slide animation */
+.submenu{
+  max-height:0;overflow:hidden;padding-left:15px;
+  opacity:0;transform:translateY(-8px);
+  transition:
+    max-height .45s cubic-bezier(.2,.9,.2,1),
+    opacity .25s ease,
+    transform .25s ease;
+}
+.submenu.open{opacity:1;transform:translateY(0)}
+.submenu button{
+  width:100%;
+  background:none;border:none;color:#cfd8dc;
+  padding:10px 0;cursor:pointer;text-align:left;
+  transform:translateX(-10px);opacity:0;
+  transition:transform .35s cubic-bezier(.2,.9,.2,1), opacity .25s ease;
+}
+.submenu.open button{transform:translateX(0);opacity:1}
+.submenu.open button:nth-child(1){transition-delay:.02s}
+.submenu.open button:nth-child(2){transition-delay:.05s}
+.submenu.open button:nth-child(3){transition-delay:.08s}
+.submenu.open button:nth-child(4){transition-delay:.11s}
+
+/* ---------- HEADER ---------- */
+.header{position:fixed;top:16px;left:0;right:0;z-index:10;pointer-events:none}
+.header-inner{
+  max-width:1120px;margin:0 auto;padding:0 18px;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+}
+.header-spacer{width:90px;pointer-events:none}
+.search-wrap{flex:1;display:flex;justify-content:center;pointer-events:auto}
+.search{
+  width:min(620px, 100%);background:#fff;
+  border:1px solid rgba(0,0,0,.08);box-shadow:var(--shadow);
+  border-radius:999px;padding:10px 14px;
+  display:flex;align-items:center;gap:10px;
+}
+.search input{width:100%;border:none;outline:none;font-size:14px}
+.search .hint{font-size:12px;color:#777;white-space:nowrap}
+
+/* Login icon (embedded SVG, no external file dependency) */
+.login-btn{
+  pointer-events:auto;
+  background:#fff;border:none;
+  width:46px;height:46px;padding:9px;border-radius:999px;
+  box-shadow:var(--shadow);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.login-btn svg{width:100%;height:100%;display:block}
+
+/* ---------- MAIN ---------- */
+.content{flex:1;padding:86px 40px 80px;overflow-y:auto}
+.back-btn{
+  position:fixed;bottom:30px;right:30px;
+  background:var(--accent);color:#fff;border:none;
+  padding:10px 18px;border-radius:20px;
+  cursor:pointer;display:none;box-shadow:var(--shadow)
+}
+
+/* ---------- MODAL ---------- */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;justify-content:center;align-items:center;z-index:20}
+.modal-content{background:#fff;padding:30px;width:340px;border-radius:14px;position:relative;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+
+/* ---------- TYPOGRAPHY / UI ---------- */
+.small{font-size:12px;color:#555}
+textarea,input,select,button{font-family:inherit}
+hr{border:none;border-top:1px solid #e6e6e6;margin:18px 0}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#eaf7f7;color:#046e6a;margin-left:8px}
+.muted{color:#666;font-size:13px}
+.section-row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:14px}
+.section-row .meta{margin-top:6px;color:#666;font-size:13px}
+
+/* Tiles */
+.tile-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:16px}
+.tile{
+  background:#fff;border:none;border-radius:18px;
+  box-shadow:var(--shadow);cursor:pointer;
+  padding:16px 14px;min-height:160px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;text-align:center;
+  transition:transform .12s ease;
+}
+.tile:hover{transform:translateY(-1px)}
+.tile .icon{
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  border-radius:14px;background:rgba(0,161,156,.10);
+}
+.tile .label{font-weight:700}
+.tile .sub{font-size:12px;color:#666;margin-top:-4px}
+
+/* Lists */
+.list button{width:100%;background:#fff;border:none;padding:14px;margin-bottom:10px;border-radius:10px;text-align:left;cursor:pointer;box-shadow:var(--shadow)}
+.list .note{padding:8px 2px}
+
+/* Buttons + panels */
+.btn{border:none;border-radius:10px;padding:10px 12px;cursor:pointer;background:rgba(0,0,0,.06)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.danger{background:#f2dede;color:#7a1e1e}
+.panel{background:#fff;border-radius:14px;box-shadow:var(--shadow);padding:16px;margin:12px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.file-list{margin-top:10px}
+.file-item{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 12px;border:1px solid rgba(0,0,0,.06);
+  border-radius:12px;margin-bottom:8px;
+}
+.file-meta{display:flex;flex-direction:column;gap:2px}
+.file-name{font-weight:700}
+.file-sub{font-size:12px;color:#666}
+</style>
+</head>
+
+<body>
+<aside class="sidebar">
+  <div class="brand">DataMac</div>
+
+  <button class="nav-button" id="homeBtn" aria-expanded="false" onclick="toggleMenu('homeMenu','homeBtn')">
+    <span class="nav-left">
+      <span class="nav-ic" aria-hidden="true"></span>
+      <span>Home</span>
+    </span>
+    <span class="nav-arrow" aria-hidden="true">▶</span>
+  </button>
+  <div class="submenu" id="homeMenu">
+    <button onclick="route('about')">Who we are</button>
+  </div>
+
+  <button class="nav-button" id="opsBtn" aria-expanded="false" onclick="toggleMenu('operationsMenu','opsBtn')">
+    <span class="nav-left">
+      <span class="nav-ic" aria-hidden="true"></span>
+      <span>Operations</span>
+    </span>
+    <span class="nav-arrow" aria-hidden="true">▶</span>
+  </button>
+  <div class="submenu" id="operationsMenu">
+    <button onclick="route('section','Finance')">Finance</button>
+    <button onclick="route('section','Human Resources')">Human Resources</button>
+    <button onclick="route('section','Global Health')">Global Health</button>
+  </div>
+
+  <button class="nav-button" id="resBtn" aria-expanded="false" onclick="toggleMenu('researchMenu','resBtn')">
+    <span class="nav-left">
+      <span class="nav-ic" aria-hidden="true"></span>
+      <span>Research Teams</span>
+    </span>
+    <span class="nav-arrow" aria-hidden="true">▶</span>
+  </button>
+  <div class="submenu" id="researchMenu">
+    <button onclick="route('section','Research Team 1')">Research Team 1</button>
+    <button onclick="route('section','Research Team 2')">Research Team 2</button>
+    <button onclick="route('section','Research Team 3')">Research Team 3</button>
+    <!-- New category under Research Teams -->
+    <button onclick="route('research_dashboard')">Dashboard</button>
+  </div>
+</aside>
+
+<!-- Fixed header -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-spacer"></div>
+
+    <div class="search-wrap">
+      <div class="search" role="search" aria-label="Search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 21l-4.35-4.35m1.35-5.65a7 7 0 11-14 0 7 7 0 0114 0z" stroke="rgba(0,0,0,.55)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input id="searchInput" type="text" placeholder="Search summaries, teams, sections..." oninput="setSearch(this.value)" />
+        <span class="hint" id="searchHint"></span>
+      </div>
+    </div>
+
+    <!-- Embedded login icon -->
+    <button class="login-btn" onclick="openLogin()" aria-label="Login">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M10 17l-1 0a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1" stroke="rgba(0,0,0,.55)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M14 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-1" stroke="rgba(0,0,0,.55)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M12 8l4 4-4 4" stroke="rgba(0,0,0,.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 12H9" stroke="rgba(0,0,0,.65)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<main class="content" id="content"></main>
+<button class="back-btn" id="backBtn" onclick="goBack()">Back</button>
+
+<!-- LOGIN MODAL -->
+<div class="modal" id="loginModal">
+  <div class="modal-content">
+    <span onclick="closeLogin()" aria-label="Close login"
+      style="position:absolute;top:12px;right:16px;font-size:22px;font-weight:bold;cursor:pointer;color:#444">
+      &times;
+    </span>
+
+    <h3>Sign in</h3>
+    <input id="userField" placeholder="Email" style="width:100%;margin-bottom:10px" />
+    <input id="passField" type="password" placeholder="Password" style="width:100%;margin-bottom:10px" />
+    <input id="apiField" placeholder="API base URL (optional)" style="width:100%;margin-bottom:15px" />
+
+    <!-- Role is now controlled by the backend token (admin/viewer). -->
+    <select id="roleField" style="display:none">
+      <option value="viewer">Viewer</option>
+      <option value="admin">Admin</option>
+    </select>
+
+    <button class="btn primary" onclick="login()">Sign in</button>
+    <div class="small" style="margin-top:10px">
+      Tip: if you started the backend locally, use <b>http://localhost:8080</b> as the API base.
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- DOM ---------- */
+const content = document.getElementById("content");
+const backBtn = document.getElementById("backBtn");
+const loginModal = document.getElementById("loginModal");
+const searchHint = document.getElementById("searchHint");
+
+/* ---------- STATE ---------- */
+let historyStack = [];
+let currentRoute = null;
+let activeSection = null;
+let currentUser = "guest";
+let currentRole = "viewer";
+let activeChart = null;
+let searchTerm = "";
+
+/* ---------- CONSTANTS ---------- */
+const OPERATIONS = new Set(["Finance","Human Resources","Global Health"]);
+
+/* ---------- STORAGE HELPERS ---------- */
+const norm = v => String(v || "").toLowerCase().replace(/\s+/g, "_");
+const sectionKey = () => `${norm(currentUser)}_${norm(activeSection || "general")}`;
+const summariesKey = () => `summaries_${sectionKey()}`;
+const historyKey = () => `history_${sectionKey()}`;
+
+/* files stores */
+const filesKey = (scope) => `files_${sectionKey()}_${scope}`;        // scope: "op" or "ws"
+const archiveKey = (scope) => `archive_${sectionKey()}_${scope}`;    // scope: "op" or "ws"
+
+
+/* datasets + chart prefs (Phase 2) */
+const datasetsKey = (scope) => `datasets_${sectionKey()}_${scope}`;          // parsed datasets
+const chartPrefsKey = (scope) => `chartprefs_${sectionKey()}_${scope}`;      // last chart selections
+
+/* ---------- SEARCH ---------- */
+function setSearch(v){
+  searchTerm = String(v || "").trim().toLowerCase();
+  searchHint.textContent = searchTerm ? "Press Back to exit view" : "";
+  render();
+}
+function matchesSearch(text){
+  if(!searchTerm) return true;
+  return String(text || "").toLowerCase().includes(searchTerm);
+}
+
+/* ---------- ROUTING ---------- */
+function sameRoute(a, b){
+  if(!a || !b) return false;
+  return a.type === b.type && a.arg === b.arg;
+}
+function route(type, arg){
+  const next = { type, arg };
+  if (sameRoute(currentRoute, next)) return;
+  if (currentRoute) historyStack.push(currentRoute);
+  currentRoute = next;
+  backBtn.style.display = historyStack.length ? "block" : "none";
+  render();
+}
+function goBack(){
+  currentRoute = historyStack.pop() || { type: "home" };
+  backBtn.style.display = historyStack.length ? "block" : "none";
+  render();
+}
+
+/* ---------- ICONS ---------- */
+function iconSvg(kind){
+  const stroke = "rgba(0,0,0,.55)";
+  const common = `stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
+
+  if(kind === "teams") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path>
+    <path d="M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+    <path d="M21 21v-2a4 4 0 0 0-3-3.87"></path>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+  </svg>`;
+
+  if(kind === "reports") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M7 3h10v18H7z"></path><path d="M9 7h6"></path><path d="M9 11h6"></path><path d="M9 15h4"></path>
+  </svg>`;
+
+  if(kind === "import") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M12 3v12"></path><path d="M8 9l4-4 4 4"></path><path d="M4 21h16"></path>
+  </svg>`;
+
+  if(kind === "cloud") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M20 17.5a4.5 4.5 0 0 0-1-8.9 6 6 0 0 0-11.7 1.7A4 4 0 0 0 8 18h10.5A3.5 3.5 0 0 0 20 17.5z"></path>
+  </svg>`;
+
+  if(kind === "summaries") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M4 4h16v16H4z"></path><path d="M8 8h8"></path><path d="M8 12h8"></path><path d="M8 16h5"></path>
+  </svg>`;
+
+  if(kind === "charts") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M4 19V5"></path><path d="M4 19h16"></path><path d="M8 17v-6"></path><path d="M12 17V9"></path><path d="M16 17v-3"></path>
+  </svg>`;
+
+  if(kind === "pie") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M21 12a9 9 0 1 1-9-9v9z"></path><path d="M12 3a9 9 0 0 1 9 9h-9z"></path>
+  </svg>`;
+
+  if(kind === "bar") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M4 19V5"></path><path d="M4 19h16"></path><path d="M8 17v-8"></path><path d="M12 17v-5"></path><path d="M16 17v-11"></path>
+  </svg>`;
+
+  if(kind === "about") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M12 12h.01"></path><path d="M11 16h1v-3h-1"></path><path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"></path>
+  </svg>`;
+
+  if(kind === "home") return `<svg width="18" height="18" viewBox="0 0 24 24" ${common}>
+    <path d="M3 11l9-8 9 8"></path><path d="M9 22V12h6v10"></path>
+  </svg>`;
+
+  if(kind === "ops") return `<svg width="18" height="18" viewBox="0 0 24 24" ${common}>
+    <path d="M6 20V10"></path><path d="M12 20V4"></path><path d="M18 20v-6"></path>
+  </svg>`;
+
+  if(kind === "research") return `<svg width="18" height="18" viewBox="0 0 24 24" ${common}>
+    <path d="M4 19V5"></path><path d="M4 19h16"></path><path d="M8 17v-6"></path><path d="M12 17V9"></path><path d="M16 17v-3"></path>
+  </svg>`;
+
+  if(kind === "meetings") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M8 7h8"></path><path d="M8 11h6"></path>
+    <path d="M7 3h10a2 2 0 0 1 2 2v14l-3-2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+  </svg>`;
+
+  if(kind === "calendar") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M7 3v3"></path><path d="M17 3v3"></path>
+    <path d="M4 8h16"></path>
+    <path d="M6 6h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
+  </svg>`;
+
+  if(kind === "more") return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}>
+    <path d="M5 12h.01"></path><path d="M12 12h.01"></path><path d="M19 12h.01"></path>
+    <path d="M5 12a1 1 0 1 0 0 .01"></path>
+  </svg>`;
+
+  return `<svg width="22" height="22" viewBox="0 0 24 24" ${common}><path d="M12 2v20"></path><path d="M2 12h20"></path></svg>`;
+}
+
+function tile(label, iconKind, onclick, sub){
+  if(!matchesSearch(label + " " + (sub || ""))) return "";
+  return `
+    <button class="tile" onclick="${onclick}">
+      <div class="icon">${iconSvg(iconKind)}</div>
+      <div class="label">${escapeHtml(label)}</div>
+      ${sub ? `<div class="sub">${escapeHtml(sub)}</div>` : ``}
+    </button>
+  `;
+}
+
+/* ---------- RENDER SWITCH ---------- */
+function render(){
+  if(!currentRoute || currentRoute.type === "home") return renderHome();
+
+  if(currentRoute.type === "section") return renderSection(currentRoute.arg);
+
+  // Operations pages
+  if(currentRoute.type === "op_teams") return renderOpTeams(currentRoute.arg);
+  if(currentRoute.type === "op_reports") return renderOpReports(currentRoute.arg);
+  if(currentRoute.type === "op_import") return renderFiles("op", currentRoute.arg);
+  if(currentRoute.type === "op_cloud") return renderCloud("op", currentRoute.arg);
+
+  // Research dashboard
+  if(currentRoute.type === "research_dashboard") return renderResearchDashboard();
+  if(currentRoute.type === "rd_meetings") return renderRDMeetings();
+  if(currentRoute.type === "rd_calendar") return renderRDCalendar();
+  if(currentRoute.type === "rd_more") return renderRDMore();
+
+  // Research workspace pages
+  if(currentRoute.type === "summary_list") return renderSummaryList();
+  if(currentRoute.type === "summary_edit") return renderSummaryEditor(currentRoute.arg);
+  if(currentRoute.type === "charts") return renderCharts();
+  if(currentRoute.type === "chart") return renderChart(currentRoute.arg);
+  if(currentRoute.type === "import") return renderFiles("ws", activeSection);
+  if(currentRoute.type === "cloud") return renderCloud("ws", activeSection);
+
+  // Who we are
+  if(currentRoute.type === "about") return renderAbout();
+
+  renderHome();
+}
+
+/* ---------- HOME ---------- */
+function renderHome(){
+  const tiles = [
+    tile("Finance", "reports", `route('section','Finance')`, "Operations"),
+    tile("Human Resources", "reports", `route('section','Human Resources')`, "Operations"),
+    tile("Global Health", "reports", `route('section','Global Health')`, "Operations"),
+    tile("Research Team 1", "summaries", `route('section','Research Team 1')`, "Research"),
+    tile("Research Team 2", "summaries", `route('section','Research Team 2')`, "Research"),
+    tile("Research Team 3", "summaries", `route('section','Research Team 3')`, "Research"),
+    tile("Who we are", "about", `route('about')`, "Information"),
+  ].filter(Boolean).join("");
+
+  content.innerHTML = `
+    <div class="section-row">
+      <div>
+        <h2 style="margin:0">Home</h2>
+        <div class="meta">
+          Signed in as <b>${escapeHtml(currentUser)}</b> <span class="badge">${escapeHtml(currentRole)}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile-grid">
+      ${tiles || `<div class="muted">No results for "${escapeHtml(searchTerm)}".</div>`}
+    </div>
+  `;
+}
+
+/* ---------- SECTION ---------- */
+function renderSection(name){
+  activeSection = name;
+  const isOp = OPERATIONS.has(name);
+
+  if(isOp){
+    const opTiles = [
+      tile("Teams", "teams", `route('op_teams','${escapeAttr(name)}')`, "People & roles"),
+      tile("Reports", "reports", `route('op_reports','${escapeAttr(name)}')`, "KPIs & reporting"),
+      tile("Import / Export", "import", `route('op_import','${escapeAttr(name)}')`, "Import & export files"),
+      tile("Cloud", "cloud", `route('op_cloud','${escapeAttr(name)}')`, "Archive files"),
+    ].filter(Boolean).join("");
+
+    content.innerHTML = `
+      <div class="section-row">
+        <div>
+          <h2 style="margin:0">${escapeHtml(name)} <span class="badge">Operations</span></h2>
+          <div class="meta">${currentRole === "admin" ? "Admin mode enabled." : "Viewer mode (read-only)."}</div>
+        </div>
+      </div>
+
+      <h3 style="margin:0 0 10px">Operations</h3>
+      <div class="tile-grid">
+        ${opTiles || `<div class="muted">No results for "${escapeHtml(searchTerm)}".</div>`}
+      </div>
+    `;
+    return;
+  }
+
+  const workspaceTiles = [
+    tile("Summary(s)", "summaries", `route('summary_list')`, "Create & manage summaries"),
+    tile("Charts", "charts", `route('charts')`, "Visualize data"),
+    tile("Import / Export", "import", `route('import')`, "Import & export files"),
+    tile("Cloud", "cloud", `route('cloud')`, "Archive files"),
+  ].filter(Boolean).join("");
+
+  content.innerHTML = `
+    <div class="section-row">
+      <div>
+        <h2 style="margin:0">${escapeHtml(name)} <span class="badge">Research</span></h2>
+        <div class="meta">${currentRole === "admin" ? "Admin mode enabled." : "Viewer mode (read-only)."}</div>
+      </div>
+    </div>
+
+    <h3 style="margin:0 0 10px">Workspace</h3>
+    <div class="tile-grid">
+      ${workspaceTiles || `<div class="muted">No results for "${escapeHtml(searchTerm)}".</div>`}
+    </div>
+  `;
+}
+
+/* ---------- OPERATIONS PAGES ---------- */
+function renderOpTeams(name){
+  content.innerHTML = `
+    <h3>${escapeHtml(name)} – Teams</h3>
+    <p class="muted">Placeholder for team members, roles, and responsibilities.</p>
+  `;
+}
+function renderOpReports(name){
+  content.innerHTML = `
+    <h3>${escapeHtml(name)} – Reports</h3>
+    <p class="muted">Reports placeholder. Next step can be KPIs, monthly performance, and charts linked to imported datasets.</p>
+  `;
+}
+
+/* ---------- RESEARCH DASHBOARD (NEW) ---------- */
+function renderResearchDashboard(){
+  // Dashboard is not tied to activeSection; make it its own view.
+  const tiles = [
+    tile("Meetings", "meetings", `route('rd_meetings')`, "Notes & agendas"),
+    tile("Calendar", "calendar", `route('rd_calendar')`, "Schedule overview"),
+    tile("More", "more", `route('rd_more')`, "Additional tools"),
+  ].filter(Boolean).join("");
+
+  content.innerHTML = `
+    <div class="section-row">
+      <div>
+        <h2 style="margin:0">Research Dashboard <span class="badge">Research</span></h2>
+        <div class="meta">Central hub for research activities.</div>
+      </div>
+    </div>
+
+    <div class="tile-grid">
+      ${tiles || `<div class="muted">No results for "${escapeHtml(searchTerm)}".</div>`}
+    </div>
+  `;
+}
+function renderRDMeetings(){
+  content.innerHTML = `
+    <h3>Dashboard – Meetings</h3>
+    <p class="muted">Placeholder for meetings list, notes, and agenda templates.</p>
+  `;
+}
+function renderRDCalendar(){
+  content.innerHTML = `
+    <h3>Dashboard – Calendar</h3>
+    <p class="muted">Placeholder for a calendar view (front-end). Backend integration can sync events later.</p>
+  `;
+}
+function renderRDMore(){
+  content.innerHTML = `
+    <h3>Dashboard – More</h3>
+    <p class="muted">Placeholder for additional dashboard tools and shortcuts.</p>
+  `;
+}
+
+/* ---------- FILES (Import/Export) ---------- */
+function readList(key){ return JSON.parse(localStorage.getItem(key) || "[]"); }
+function writeList(key, arr){ localStorage.setItem(key, JSON.stringify(arr)); }
+
+function formatBytes(bytes){
+  if(bytes === 0) return "0 B";
+  const k = 1024, sizes = ["B","KB","MB","GB"];
+  const i = Math.floor(Math.log(bytes)/Math.log(k));
+  const val = bytes / Math.pow(k,i);
+  return `${val.toFixed(val >= 10 || i === 0 ? 0 : 1)} ${sizes[i]}`;
+}
+
+/* ---------- DATASET PARSING (Phase 2) ---------- */
+function uid(prefix="ds"){
+  return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function readObj(key){ return JSON.parse(localStorage.getItem(key) || "{}"); }
+function writeObj(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
+
+/* Basic CSV parser with quote handling */
+function parseCSV(text){
+  const rows = [];
+  const lines = String(text || "").replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n").filter(l=>l.trim().length);
+  if(!lines.length) return { headers:[], rows:[] };
+
+  const splitLine = (line) => {
+    const out = [];
+    let cur = "", inQuotes = false;
+    for(let i=0;i<line.length;i++){
+      const ch = line[i];
+      if(ch === '"'){
+        if(inQuotes && line[i+1] === '"'){ cur += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if(ch === "," && !inQuotes){
+        out.push(cur); cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur);
+    return out.map(v=>v.trim());
+  };
+
+  const headers = splitLine(lines[0]).map(h => h || "Column");
+  for(let i=1;i<lines.length;i++){
+    const parts = splitLine(lines[i]);
+    const obj = {};
+    headers.forEach((h, idx)=> obj[h] = (parts[idx] ?? ""));
+    rows.push(obj);
+    if(rows.length >= 500) break; // cap for performance
+  }
+  return { headers, rows };
+}
+
+function inferColumnTypes(headers, rows){
+  const types = headers.map(h => {
+    let num=0, date=0, total=0;
+    for(let i=0;i<Math.min(rows.length, 40);i++){
+      const v = String(rows[i][h] ?? "").trim();
+      if(!v) continue;
+      total++;
+      const asNum = Number(v.replace(/,/g,""));
+      if(!Number.isNaN(asNum) && v.match(/^-?[0-9,]+(\.[0-9]+)?$/)) num++;
+      const asDate = Date.parse(v);
+      if(!Number.isNaN(asDate) && v.length >= 6) date++;
+    }
+    if(total && num/total >= 0.75) return "number";
+    if(total && date/total >= 0.75) return "date";
+    return "string";
+  });
+  return headers.map((h, i)=>({ name:h, type:types[i] }));
+}
+
+function coerceValue(v, type){
+  if(type === "number"){
+    const n = Number(String(v ?? "").replace(/,/g,"").trim());
+    return Number.isFinite(n) ? n : null;
+  }
+  if(type === "date"){
+    const t = Date.parse(String(v ?? "").trim());
+    return Number.isFinite(t) ? t : null;
+  }
+  const s = String(v ?? "").trim();
+  return s.length ? s : null;
+}
+
+function buildDatasetFromCSV(fileName, text){
+  const parsed = parseCSV(text);
+  const columns = inferColumnTypes(parsed.headers, parsed.rows);
+  const rows = parsed.rows.map(r => {
+    const out = {};
+    columns.forEach(c => out[c.name] = coerceValue(r[c.name], c.type));
+    return out;
+  });
+  return {
+    id: uid("ds"),
+    name: fileName,
+    source: "csv",
+    createdAt: Date.now(),
+    columns,
+    rows
+  };
+}
+
+function buildDatasetFromJSON(fileName, text){
+  let obj;
+  try { obj = JSON.parse(text); } catch(e){ return null; }
+
+  let rows = [];
+  if(Array.isArray(obj)) rows = obj;
+  else if(obj && typeof obj === "object"){
+    const firstArrKey = Object.keys(obj).find(k => Array.isArray(obj[k]));
+    if(firstArrKey) rows = obj[firstArrKey];
+  }
+  if(!Array.isArray(rows) || !rows.length) return null;
+
+  // normalize to array of objects
+  rows = rows.filter(r => r && typeof r === "object" && !Array.isArray(r)).slice(0, 500);
+  const headers = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+  const columns = inferColumnTypes(headers, rows);
+  const normRows = rows.map(r => {
+    const out = {};
+    columns.forEach(c => out[c.name] = coerceValue(r[c.name], c.type));
+    return out;
+  });
+
+  return {
+    id: uid("ds"),
+    name: fileName,
+    source: "json",
+    createdAt: Date.now(),
+    columns,
+    rows: normRows
+  };
+}
+
+/* Aggregate values for charting */
+function aggregateForChart(dataset, xCol, yCol, agg="sum"){
+  if(!dataset) return null;
+  const xDef = dataset.columns.find(c=>c.name===xCol);
+  const yDef = dataset.columns.find(c=>c.name===yCol);
+  if(!xDef) return null;
+  if(agg !== "count" && !yDef) return null;
+
+  const buckets = new Map();
+
+  for(const r of dataset.rows){
+    const x = r[xCol];
+    const y = r[yCol];
+    if(x === null || x === undefined) continue;
+
+    const key = (xDef.type === "date" && Number.isFinite(x)) ? new Date(x).toLocaleDateString() : String(x);
+    if(!buckets.has(key)) buckets.set(key, { sum:0, count:0, min:null, max:null });
+
+    const b = buckets.get(key);
+    if(agg === "count"){
+      b.count += 1;
+      continue;
+    }
+    if(yDef.type !== "number" || !Number.isFinite(y)) continue;
+
+    b.sum += y;
+    b.count += 1;
+    b.min = (b.min === null) ? y : Math.min(b.min, y);
+    b.max = (b.max === null) ? y : Math.max(b.max, y);
+  }
+
+  const labels = Array.from(buckets.keys());
+  const values = labels.map(k => {
+    const b = buckets.get(k);
+    if(agg === "avg") return b.count ? (b.sum / b.count) : 0;
+    if(agg === "min") return (b.min ?? 0);
+    if(agg === "max") return (b.max ?? 0);
+    if(agg === "count") return b.count;
+    return b.sum; // sum
+  });
+
+  return { labels, values, xType:xDef.type, yType:(yDef ? yDef.type : "count") };
+}
+
+function insightText(labels, values, agg, yLabel){
+  if(!labels?.length) return `<div class="muted">No data to analyze for the selected mapping.</div>`;
+  const nums = values.map(v=>Number(v)).filter(v=>Number.isFinite(v));
+  if(!nums.length) return `<div class="muted">No numeric values available for insights.</div>`;
+
+  const total = nums.reduce((a,b)=>a+b,0);
+  const avg = total / nums.length;
+  let min = {v:nums[0], i:0}, max = {v:nums[0], i:0};
+  nums.forEach((v,i)=>{ if(v<min.v) min={v,i}; if(v>max.v) max={v,i}; });
+
+  const first = nums[0], last = nums[nums.length-1];
+  const trend = (first && Number.isFinite(first)) ? ((last-first)/Math.abs(first))*100 : null;
+  const trendText = (trend === null || !Number.isFinite(trend))
+    ? "Trend not available."
+    : `Overall change from first to last: ${trend.toFixed(1)}%.`;
+
+  return `
+    <div class="panel">
+      <h4 style="margin:0 0 10px">Insights</h4>
+      <div class="small">
+        <div><b>Metric:</b> ${escapeHtml(yLabel)} (${escapeHtml(agg)})</div>
+        <div><b>Total:</b> ${total.toFixed(2)}</div>
+        <div><b>Average:</b> ${avg.toFixed(2)}</div>
+        <div><b>Highest:</b> ${escapeHtml(labels[max.i])} (${max.v.toFixed(2)})</div>
+        <div><b>Lowest:</b> ${escapeHtml(labels[min.i])} (${min.v.toFixed(2)})</div>
+        <div><b>${trendText}</b></div>
+      </div>
+    </div>
+  `;
+}
+
+
+function renderFiles(scope, sectionName){
+  // scope: "op" or "ws"
+  const files = readList(filesKey(scope));
+  content.innerHTML = `
+    <h3>${escapeHtml(sectionName || activeSection)} – Import / Export</h3>
+    <p class="muted">Front-end only. Files are stored in browser storage for the demo.</p>
+
+    <div class="panel">
+      <h4 style="margin:0 0 10px">Import files</h4>
+      <div class="row">
+        <input id="fileInput" type="file" multiple
+          accept=".csv,.xlsx,.xls,.json,.txt,.pdf,.png,.jpg,.jpeg"
+        />
+        <button class="btn primary" onclick="importFiles('${scope}')">Import</button>
+        <button class="btn" onclick="clearSelected()">Clear</button>
+      </div>
+      <div class="small" style="margin-top:10px;color:#666">
+        Supported: CSV, Excel, JSON, TXT, PDF, PNG/JPG (demo). Stored locally until backend is added.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h4 style="margin:0 0 10px">Export files</h4>
+      ${files.length ? `
+        <div class="row" style="margin-bottom:10px">
+          <button class="btn" onclick="exportManifest('${scope}')">Export manifest (JSON)</button>
+          <button class="btn danger" onclick="deleteAllFiles('${scope}')">Delete all</button>
+          <button class="btn" onclick="route('${scope === "op" ? "op_cloud" : "cloud"}','${escapeAttr(sectionName || activeSection)}')">Open Cloud</button>
+        </div>
+
+        <div class="file-list">
+          ${files.map((f, idx)=>`
+            <div class="file-item">
+              <div class="file-meta">
+                <div class="file-name">${escapeHtml(f.name)}</div>
+                <div class="file-sub">${escapeHtml(f.type || "unknown")} • ${escapeHtml(formatBytes(f.size || 0))} • ${new Date(f.time).toLocaleString()}</div>
+              </div>
+              <div class="row">
+                <button class="btn" onclick="downloadFile('${scope}', ${idx})">Export</button>
+                <button class="btn" onclick="archiveFile('${scope}', ${idx})">Archive</button>
+                <button class="btn danger" onclick="deleteFile('${scope}', ${idx})">Delete</button>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      ` : `<div class="muted">No files imported yet.</div>`}
+    </div>
+  `;
+}
+
+function clearSelected(){
+  const inp = document.getElementById("fileInput");
+  if(inp) inp.value = "";
+}
+
+
+function importFiles(scope){
+  const inp = document.getElementById("fileInput");
+  if(!inp || !inp.files || !inp.files.length) return;
+
+  const toImport = Array.from(inp.files);
+  const existing = readList(filesKey(scope));
+  const datasets = readList(datasetsKey(scope));
+
+  let pending = toImport.length;
+
+  const finish = () => {
+    pending--;
+    if(pending === 0){
+      writeList(filesKey(scope), existing.slice(0, 50));     // cap
+      writeList(datasetsKey(scope), datasets.slice(0, 50));  // cap datasets
+      clearSelected();
+      render();
+    }
+  };
+
+  toImport.forEach(file => {
+    // Always store DataURL for export/download
+    const readerUrl = new FileReader();
+    readerUrl.onload = () => {
+      const record = {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        time: Date.now(),
+        dataUrl: readerUrl.result,
+        datasetId: null
+      };
+
+      // CSV / JSON: attempt dataset parsing (text)
+      const lower = String(file.name || "").toLowerCase();
+      const isCSV = lower.endsWith(".csv");
+      const isJSON = lower.endsWith(".json");
+
+      if(isCSV || isJSON){
+        const readerText = new FileReader();
+        readerText.onload = () => {
+          const text = String(readerText.result || "");
+          let ds = null;
+
+          if(isCSV) ds = buildDatasetFromCSV(file.name, text);
+          if(isJSON) ds = buildDatasetFromJSON(file.name, text);
+
+          if(ds){
+            // Add dataset
+            datasets.unshift(ds);
+            record.datasetId = ds.id;
+          }
+
+          existing.unshift(record);
+          finish();
+        };
+        readerText.onerror = () => { existing.unshift(record); finish(); };
+        readerText.readAsText(file);
+        return;
+      }
+
+      // Non-structured files
+      existing.unshift(record);
+      finish();
+    };
+
+    readerUrl.onerror = finish;
+    readerUrl.readAsDataURL(file);
+  });
+}
+
+function downloadFile(scope, idx){
+  const files = readList(filesKey(scope));
+  const f = files[idx];
+  if(!f || !f.dataUrl) return;
+  const a = document.createElement("a");
+  a.href = f.dataUrl;
+  a.download = f.name || "export";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function exportManifest(scope){
+  const files = readList(filesKey(scope)).map(({dataUrl, ...meta}) => meta);
+  const blob = new Blob([JSON.stringify(files, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `datamac_${scope}_files_manifest.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function deleteFile(scope, idx){
+  const files = readList(filesKey(scope));
+  files.splice(idx, 1);
+  writeList(filesKey(scope), files);
+  render();
+}
+function deleteAllFiles(scope){
+  if(!confirm("Delete all imported files?")) return;
+  writeList(filesKey(scope), []);
+  render();
+}
+
+/* ---------- CLOUD (Archive) ---------- */
+function archiveFile(scope, idx){
+  const files = readList(filesKey(scope));
+  const arch = readList(archiveKey(scope));
+  const f = files[idx];
+  if(!f) return;
+
+  files.splice(idx, 1);
+  arch.unshift({...f, archivedAt: Date.now()});
+
+  writeList(filesKey(scope), files);
+  writeList(archiveKey(scope), arch.slice(0, 200)); // cap archive
+  render();
+}
+
+function restoreFromCloud(scope, idx){
+  const arch = readList(archiveKey(scope));
+  const files = readList(filesKey(scope));
+  const f = arch[idx];
+  if(!f) return;
+
+  arch.splice(idx, 1);
+  const {archivedAt, ...restored} = f;
+  files.unshift(restored);
+
+  writeList(archiveKey(scope), arch);
+  writeList(filesKey(scope), files.slice(0, 50));
+  render();
+}
+
+function deleteFromCloud(scope, idx){
+  const arch = readList(archiveKey(scope));
+  arch.splice(idx, 1);
+  writeList(archiveKey(scope), arch);
+  render();
+}
+
+function renderCloud(scope, sectionName){
+  const arch = readList(archiveKey(scope));
+  const title = `${escapeHtml(sectionName || activeSection)} – Cloud`;
+
+  content.innerHTML = `
+    <h3>${title}</h3>
+    <p class="muted">Archive storage for your imported files (front-end demo). Use this before backend storage is connected.</p>
+
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <div><b>Archived files</b></div>
+        <div class="row">
+          <button class="btn" onclick="route('${scope === "op" ? "op_import" : "import"}','${escapeAttr(sectionName || activeSection)}')">Go to Import/Export</button>
+          <button class="btn danger" onclick="deleteAllCloud('${scope}')">Delete all</button>
+        </div>
+      </div>
+
+      ${arch.length ? `
+        <div class="file-list" style="margin-top:12px">
+          ${arch.map((f, idx)=>`
+            <div class="file-item">
+              <div class="file-meta">
+                <div class="file-name">${escapeHtml(f.name)}</div>
+                <div class="file-sub">${escapeHtml(f.type || "unknown")} • ${escapeHtml(formatBytes(f.size || 0))} • Archived ${new Date(f.archivedAt || f.time).toLocaleString()}</div>
+              </div>
+              <div class="row">
+                <button class="btn" onclick="downloadCloudFile('${scope}', ${idx})">Export</button>
+                <button class="btn" onclick="restoreFromCloud('${scope}', ${idx})">Restore</button>
+                <button class="btn danger" onclick="deleteFromCloud('${scope}', ${idx})">Delete</button>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      ` : `<div class="muted" style="margin-top:10px">No archived files yet.</div>`}
+    </div>
+  `;
+}
+
+function downloadCloudFile(scope, idx){
+  const arch = readList(archiveKey(scope));
+  const f = arch[idx];
+  if(!f || !f.dataUrl) return;
+  const a = document.createElement("a");
+  a.href = f.dataUrl;
+  a.download = f.name || "export";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function deleteAllCloud(scope){
+  if(!confirm("Delete all archived files?")) return;
+  writeList(archiveKey(scope), []);
+  render();
+}
+
+/* ---------- SUMMARIES ---------- */
+function renderSummaryList(){
+  const dataAll = JSON.parse(localStorage.getItem(summariesKey()) || "[]");
+  const data = searchTerm ? dataAll.filter(s => matchesSearch(s.title)) : dataAll;
+
+  const emptyState = !dataAll.length
+    ? `<div class="muted" style="margin:10px 0 16px">No summaries yet for <b>${escapeHtml(activeSection)}</b>.</div>`
+    : (searchTerm && !data.length
+        ? `<div class="muted" style="margin:10px 0 16px">No summary titles match "${escapeHtml(searchTerm)}".</div>`
+        : "");
+
+  content.innerHTML = `
+    <h3>${escapeHtml(activeSection)} – Summaries</h3>
+    ${emptyState}
+
+    <div class="list">
+      ${data.map((s)=>`
+        <button onclick="route('summary_edit',${dataAll.indexOf(s)})">${escapeHtml(s.title || ("Untitled " + (dataAll.indexOf(s)+1)))}</button>
+      `).join("")}
+
+      ${currentRole === "admin"
+        ? `<button onclick="route('summary_edit',-1)">➕ Create New Summary</button>`
+        : `<div class="small note">Viewer mode: read-only access.</div>`
+      }
+    </div>
+  `;
+}
+
+function renderSummaryEditor(index){
+  const data = JSON.parse(localStorage.getItem(summariesKey()) || "[]");
+  const item = index >= 0 ? data[index] : { title:"", text:"" };
+  const versions = JSON.parse(localStorage.getItem(historyKey()) || "[]").filter(v => v.index === index);
+
+  const isAdmin = currentRole === "admin";
+  const titleValue = escapeAttr(item.title || "");
+  const textValue = escapeHtml(item.text || "");
+
+  content.innerHTML = `
+    <h3>${index >= 0 ? "Edit" : "New"} Summary</h3>
+    <div class="muted" style="margin-top:-8px;margin-bottom:14px">
+      ${isAdmin ? "Admin mode: editing enabled." : "Viewer mode: read-only."}
+    </div>
+
+    <input id="titleField" value="${titleValue}" placeholder="Title" style="width:100%;margin-bottom:10px" ${isAdmin ? "" : "disabled"} />
+    <textarea id="textField" style="width:100%;height:220px" ${isAdmin ? "" : "disabled"}>${textValue}</textarea>
+
+    <br><br>
+
+    <div class="row">
+      ${isAdmin ? `
+        <button class="btn primary" onclick="saveSummary(${index})">Save</button>
+        <button class="btn" onclick="discardSummary()">Discard</button>
+        ${index >= 0 ? `<button class="btn danger" onclick="deleteSummary(${index})">Delete</button>` : ""}
+        <button class="btn" onclick="window.print()">Export PDF</button>
+        <button class="btn" onclick="goBack()">Back</button>
+      ` : `
+        <button class="btn" onclick="goBack()">Back</button>
+      `}
+    </div>
+
+    ${index >= 0 && versions.length ? `
+      <hr>
+      <h4>Version History</h4>
+      ${versions.map((v,i)=>`
+        <div class="small" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <span>${new Date(v.time).toLocaleString()}</span>
+          <button class="btn" onclick="restoreVersion(${i})">Restore</button>
+        </div>
+      `).join("")}
+    ` : ""}
+  `;
+}
+
+function saveSummary(index){
+  if(currentRole !== "admin") return;
+
+  const data = JSON.parse(localStorage.getItem(summariesKey()) || "[]");
+  const history = JSON.parse(localStorage.getItem(historyKey()) || "[]");
+  const obj = { title: titleField.value, text: textField.value };
+
+  if(index >= 0){
+    history.push({ index, time: Date.now(), ...data[index] });
+    data[index] = obj;
+  }else{
+    data.push(obj);
+  }
+
+  localStorage.setItem(summariesKey(), JSON.stringify(data));
+  localStorage.setItem(historyKey(), JSON.stringify(history));
+  goBack();
+}
+function discardSummary(){ if(currentRole === "admin") goBack(); }
+function restoreVersion(i){
+  if(currentRole !== "admin") return;
+  const historyAll = JSON.parse(localStorage.getItem(historyKey()) || "[]");
+  const vList = historyAll.filter(x => x.index === currentRoute.arg);
+  const v = vList[i];
+  if(!v) return;
+  setTimeout(() => { titleField.value = v.title || ""; textField.value = v.text || ""; }, 0);
+}
+function deleteSummary(index){
+  if(currentRole !== "admin") return;
+  if(!confirm("Delete this summary?")) return;
+  const data = JSON.parse(localStorage.getItem(summariesKey()) || "[]");
+  data.splice(index, 1);
+  localStorage.setItem(summariesKey(), JSON.stringify(data));
+  goBack();
+}
+
+/* ---------- CHARTS ---------- */
+
+function renderCharts(){
+  const scope = "ws";
+  const datasets = readList(datasetsKey(scope));
+
+  const tiles = [
+    tile("Bar Chart", "bar", `route('chart','bar')`, "Compare categories"),
+    tile("Pie Chart", "pie", `route('chart','pie')`, "Share of total"),
+  ].filter(Boolean).join("");
+
+  content.innerHTML = `
+    <div class="section-row">
+      <div>
+        <h3 style="margin:0">Charts</h3>
+        <div class="meta">
+          ${datasets.length ? `${datasets.length} dataset(s) available for charting.` : `No datasets found yet. Import a CSV or JSON file to enable Phase 2 charts.`}
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn" onclick="route('import')">Go to Import / Export</button>
+      </div>
+    </div>
+
+    <div class="tile-grid">
+      ${tiles || `<div class="muted">No results for "${escapeHtml(searchTerm)}".</div>`}
+    </div>
+
+    <div class="small" style="margin-top:12px">
+      Phase 2: charts can bind to imported CSV/JSON datasets. If no dataset is selected, demo data is shown.
+    </div>
+  `;
+}
+
+function renderChart(type){
+  const scope = "ws";
+  const datasets = readList(datasetsKey(scope));
+
+  const prefs = readObj(chartPrefsKey(scope));
+  let datasetId = prefs.datasetId || (datasets[0]?.id || "");
+  let agg = prefs.agg || "sum";
+  let xCol = prefs.xCol || "";
+  let yCol = prefs.yCol || "";
+
+  const selected = datasets.find(d => d.id === datasetId) || null;
+
+  // Default column picks
+  if(selected){
+    const cols = selected.columns || [];
+    const firstString = cols.find(c => c.type === "string")?.name || cols[0]?.name || "";
+    const firstNumber = cols.find(c => c.type === "number")?.name || cols[1]?.name || cols[0]?.name || "";
+    if(!xCol) xCol = firstString;
+    if(!yCol) yCol = firstNumber;
+  }
+
+  const datasetOptions = [
+    `<option value="">(Demo data)</option>`,
+    ...datasets.map(d => `<option value="${escapeAttr(d.id)}">${escapeHtml(d.name)}</option>`)
+  ].join("");
+
+  const colOptions = (ds, selectedName, filterFn) => {
+    if(!ds) return `<option value="">—</option>`;
+    return (ds.columns || [])
+      .filter(c => !filterFn || filterFn(c))
+      .map(c => `<option value="${escapeAttr(c.name)}"${c.name===selectedName?' selected':''}>${escapeHtml(c.name)} <span class="small">(${escapeHtml(c.type)})</span></option>`)
+      .join("") || `<option value="">—</option>`;
+  };
+
+  content.innerHTML = `
+    <h3 style="margin:0 0 10px">${escapeHtml(String(type).toUpperCase())} Chart</h3>
+
+    <div class="panel">
+      <h4 style="margin:0 0 10px">Chart Builder</h4>
+      <div class="row">
+        <div style="flex:1;min-width:220px">
+          <div class="small">Dataset</div>
+          <select id="dsSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.12)">
+            ${datasetOptions}
+          </select>
+        </div>
+
+        <div style="flex:1;min-width:180px">
+          <div class="small">X-axis (category)</div>
+          <select id="xSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.12)">
+            ${colOptions(selected, xCol)}
+          </select>
+        </div>
+
+        <div style="flex:1;min-width:180px">
+          <div class="small">Y-axis (metric)</div>
+          <select id="ySel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.12)">
+            ${agg === "count" ? colOptions(selected, yCol) : colOptions(selected, yCol, c=>c.type === "number")}
+          </select>
+        </div>
+
+        <div style="min-width:160px">
+          <div class="small">Aggregation</div>
+          <select id="aggSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.12)">
+            ${["sum","avg","min","max","count"].map(a => `<option value="${a}"${a===agg?' selected':''}>${a.toUpperCase()}</option>`).join("")}
+          </select>
+        </div>
+
+        <div style="display:flex;align-items:flex-end;gap:10px">
+          <button class="btn primary" onclick="applyChartConfig('${escapeAttr(type)}')">Apply</button>
+          <button class="btn" onclick="goBack()">Back</button>
+        </div>
+      </div>
+
+      <div class="small" style="margin-top:10px;color:#666">
+        Tip: import a CSV or JSON file in this section to enable dataset-driven charts. (Stored locally in browser for demo.)
+      </div>
+    </div>
+
+    <div class="panel" style="min-height:380px">
+      <canvas id="c"></canvas>
+    </div>
+
+    <div id="insights"></div>
+  `;
+
+  // Set initial selections
+  const dsSel = document.getElementById("dsSel");
+  const xSel = document.getElementById("xSel");
+  const ySel = document.getElementById("ySel");
+  const aggSel = document.getElementById("aggSel");
+
+  if(dsSel) dsSel.value = datasetId || "";
+  if(xSel) xSel.value = xCol || "";
+  if(aggSel) aggSel.value = agg || "sum";
+  if(ySel) ySel.value = yCol || "";
+
+  // Render initial chart
+  renderChartWithConfig(type, datasetId, xCol, yCol, agg);
+}
+
+function applyChartConfig(type){
+  const scope = "ws";
+  const datasetId = (document.getElementById("dsSel")?.value || "");
+  const xCol = (document.getElementById("xSel")?.value || "");
+  const yCol = (document.getElementById("ySel")?.value || "");
+  const agg = (document.getElementById("aggSel")?.value || "sum");
+
+  writeObj(chartPrefsKey(scope), { datasetId, xCol, yCol, agg });
+  renderChartWithConfig(type, datasetId, xCol, yCol, agg);
+}
+
+function renderChartWithConfig(type, datasetId, xCol, yCol, agg){
+  if(activeChart) activeChart.destroy();
+
+  const scope = "ws";
+  const datasets = readList(datasetsKey(scope));
+  const selected = datasets.find(d => d.id === datasetId) || null;
+
+  let labels = ["A","B","C"];
+  let values = [10,20,15];
+  let yLabel = "Demo";
+
+  if(selected && xCol && (agg === "count" || yCol)){
+    const mapped = aggregateForChart(selected, xCol, (agg === "count" ? yCol : yCol), agg);
+    if(mapped && mapped.labels.length){
+      labels = mapped.labels;
+      values = mapped.values;
+      yLabel = (agg === "count") ? "Count" : (yCol || "Metric");
+    }
+  }
+
+  activeChart = new Chart(c, {
+    type,
+    data: { labels, datasets: [{ label: yLabel, data: values }] },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ display:true } }
+    }
+  });
+  c.parentElement.style.minHeight = "340px";
+
+  const insights = document.getElementById("insights");
+  if(insights){
+    insights.innerHTML = (selected && xCol && (agg === "count" || yCol))
+      ? insightText(labels, values, agg, yLabel)
+      : `<div class="muted">Using demo data. Select a dataset and mapping to enable Phase 2 insights.</div>`;
+  }
+}
+
+/* ---------- WHO WE ARE ---------- */
+function renderAbout(){
+  content.innerHTML = `
+    <h2>Who we are</h2>
+    <p class="muted">
+      DataMac is a unified workspace for Operations and Research teams, supporting summaries, charts, and data exchange.
+      This UI is being refined first for a strong, presentable demo before backend integration.
+    </p>
+  `;
+}
+
+/* ---------- LOGIN ---------- */
+function openLogin(){ loginModal.style.display = "flex"; }
+function closeLogin(){ loginModal.style.display = "none"; }
+function login(){
+  currentUser = userField.value || "guest";
+  currentRole = roleField.value || "viewer";
+  closeLogin();
+  historyStack = [];
+  currentRoute = { type: "home" };
+  backBtn.style.display = "none";
+  render();
+}
+
+/* ---------- MENU TOGGLE ---------- */
+function toggleMenu(menuId, btnId){
+  const m = document.getElementById(menuId);
+  const b = document.getElementById(btnId);
+  const isOpen = m.classList.contains("open");
+
+  document.querySelectorAll(".submenu").forEach(x=>{
+    x.classList.remove("open");
+    x.style.maxHeight = null;
+  });
+  document.querySelectorAll(".nav-button").forEach(nb=>{
+    nb.setAttribute("aria-expanded","false");
+  });
+
+  if(!isOpen){
+    m.classList.add("open");
+    m.style.maxHeight = m.scrollHeight + "px";
+    b.setAttribute("aria-expanded","true");
+  }
+}
+
+/* ---------- ESC HELPERS ---------- */
+function escapeHtml(str){
+  return String(str ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+function escapeAttr(str){
+  return escapeHtml(str).replace(/`/g,"&#096;");
+}
+
+/* ---------- Sidebar Icon Injection ---------- */
+function injectSidebarIcons(){
+  const map = [
+    {btn:"homeBtn", kind:"home"},
+    {btn:"opsBtn", kind:"ops"},
+    {btn:"resBtn", kind:"research"},
+  ];
+  map.forEach(x=>{
+    const b = document.getElementById(x.btn);
+    if(!b) return;
+    const ic = b.querySelector(".nav-ic");
+    if(ic) ic.innerHTML = iconSvg(x.kind);
+  });
+}
+
+
+/* ===================== BACKEND WIRING (DataMac API) ===================== */
+/**
+ * This block replaces localStorage-backed demo behaviors with real API calls:
+ * - Auth (/api/auth/login, /api/auth/me)
+ * - Sections (/api/sections)
+ * - Summaries + versions
+ * - Files (upload/list/download/archive/restore/delete) stored in S3/MinIO
+ * - Charts preview + chart prefs
+ *
+ * Default API base: http://localhost:8080
+ */
+let API_BASE = (localStorage.getItem("datamac_api_base") || "http://localhost:8080").replace(/\/+$/,"");
+let AUTH_TOKEN = localStorage.getItem("datamac_token") || "";
+let SECTIONS = [];
+let SECTION_BY_TITLE = new Map(); // normalized title -> section
+let SECTION_BY_KEY = new Map();   // key -> section
+
+const TITLE_ALIASES = new Map([
+  ["Human Resources","Human Resource"], // UI legacy -> backend seed
+]);
+
+function normTitle(t){
+  return String(t||"").trim().toLowerCase();
+}
+function apiUrl(path){
+  const p = String(path||"").startsWith("/") ? path : ("/" + path);
+  return API_BASE + p;
+}
+async function apiFetch(path, opts={}){
+  const headers = Object.assign({}, opts.headers || {});
+  if(!(opts.body instanceof FormData)){
+    if(!headers["Content-Type"]) headers["Content-Type"] = "application/json";
+  }
+  if(AUTH_TOKEN){
+    headers["Authorization"] = "Bearer " + AUTH_TOKEN;
+  }
+  const res = await fetch(apiUrl(path), { ...opts, headers });
+  const isJson = (res.headers.get("content-type") || "").includes("application/json");
+  const payload = isJson ? await res.json().catch(()=>null) : await res.text().catch(()=>null);
+  if(!res.ok){
+    const msg = (payload && payload.error) ? payload.error : (typeof payload === "string" ? payload : ("HTTP " + res.status));
+    throw new Error(msg);
+  }
+  return payload;
+}
+
+function setApiBaseFromField(){
+  const v = (document.getElementById("apiField")?.value || "").trim();
+  if(v){
+    API_BASE = v.replace(/\/+$/,"");
+    localStorage.setItem("datamac_api_base", API_BASE);
+  }else{
+    // keep current
+  }
+}
+
+async function loadMe(){
+  const me = await apiFetch("/api/auth/me");
+  const u = me?.user || null;
+  if(!u) throw new Error("Not signed in");
+  currentUser = u.email || "user";
+  currentRole = u.role || "viewer";
+  return u;
+}
+
+async function loadSections(){
+  const r = await apiFetch("/api/sections");
+  SECTIONS = r.sections || [];
+  SECTION_BY_TITLE = new Map();
+  SECTION_BY_KEY = new Map();
+  SECTIONS.forEach(s=>{
+    SECTION_BY_TITLE.set(normTitle(s.title), s);
+    SECTION_BY_KEY.set(s.key, s);
+  });
+}
+
+function getBackendSectionTitle(uiTitle){
+  const t = String(uiTitle||"");
+  return TITLE_ALIASES.get(t) || t;
+}
+function getActiveSectionId(){
+  const title = getBackendSectionTitle(activeSection);
+  const s = SECTION_BY_TITLE.get(normTitle(title));
+  return s ? s.id : null;
+}
+
+async function bootstrapAuth(){
+  if(!AUTH_TOKEN) return false;
+  try{
+    await loadMe();
+    await loadSections();
+    return true;
+  }catch(e){
+    AUTH_TOKEN = "";
+    localStorage.removeItem("datamac_token");
+    return false;
+  }
+}
+
+/* ---- Replace login/logout ---- */
+async function login(){
+  try{
+    setApiBaseFromField();
+    const email = (document.getElementById("userField")?.value || "").trim();
+    const password = (document.getElementById("passField")?.value || "");
+    if(!email || !password){
+      alert("Enter email + password.");
+      return;
+    }
+    const r = await apiFetch("/api/auth/login", {
+      method:"POST",
+      body: JSON.stringify({ email, password })
+    });
+    AUTH_TOKEN = r.token;
+    localStorage.setItem("datamac_token", AUTH_TOKEN);
+    currentUser = r.user?.email || email;
+    currentRole = r.user?.role || "viewer";
+    await loadSections();
+    closeLogin();
+    historyStack = [];
+    currentRoute = { type: "home" };
+    backBtn.style.display = "none";
+    render();
+  }catch(e){
+    alert("Login failed: " + e.message);
+  }
+}
+
+function logout(){
+  AUTH_TOKEN = "";
+  localStorage.removeItem("datamac_token");
+  currentUser = "guest";
+  currentRole = "viewer";
+  SECTIONS = [];
+  SECTION_BY_TITLE = new Map();
+  SECTION_BY_KEY = new Map();
+  historyStack = [];
+  currentRoute = { type: "home" };
+  backBtn.style.display = "none";
+  render();
+}
+
+/* ---- Patch header user panel to include Logout when signed in ---- */
+const _renderHome_orig = renderHome;
+renderHome = function(){
+  _renderHome_orig();
+  // renderHome already builds header cards; we just ensure the header status shows correct role.
+}
+
+/* ---- Summaries (API-backed) ---- */
+async function fetchSummariesForActiveSection(){
+  const sectionId = getActiveSectionId();
+  if(!sectionId) return [];
+  const r = await apiFetch(`/api/sections/${sectionId}/summaries`);
+  return r.summaries || [];
+}
+
+function renderSummaryList(){
+  if(!AUTH_TOKEN){
+    content.innerHTML = `
+      <h3>${escapeHtml(activeSection)} – Summaries</h3>
+      <div class="muted" style="margin-top:10px">Please sign in to view summaries.</div>
+      <button class="btn primary" style="margin-top:12px" onclick="openLogin()">Sign in</button>
+    `;
+    return;
+  }
+
+  content.innerHTML = `
+    <h3>${escapeHtml(activeSection)} – Summaries</h3>
+    <div class="muted" style="margin-top:10px">Loading…</div>
+  `;
+
+  (async ()=>{
+    try{
+      const list = await fetchSummariesForActiveSection();
+      const filtered = searchTerm ? list.filter(s => matchesSearch(s.title)) : list;
+
+      const emptyState = !list.length
+        ? `<div class="muted" style="margin:10px 0 16px">No summaries yet for <b>${escapeHtml(activeSection)}</b>.</div>`
+        : (searchTerm && !filtered.length
+            ? `<div class="muted" style="margin:10px 0 16px">No summary titles match "${escapeHtml(searchTerm)}".</div>`
+            : "");
+
+      content.innerHTML = `
+        <h3>${escapeHtml(activeSection)} – Summaries</h3>
+        ${emptyState}
+
+        <div class="list">
+          ${filtered.map(s=>`
+            <button onclick="route('summary_edit','${escapeAttr(s.id)}')">${escapeHtml(s.title || "Untitled")}</button>
+          `).join("")}
+
+          ${currentRole === "admin"
+            ? `<button onclick="route('summary_edit','new')">➕ Create New Summary</button>`
+            : `<div class="small note">Viewer mode: read-only access.</div>`
+          }
+        </div>
+      `;
+    }catch(e){
+      content.innerHTML = `
+        <h3>${escapeHtml(activeSection)} – Summaries</h3>
+        <div class="muted" style="margin-top:10px">Could not load summaries: ${escapeHtml(e.message)}</div>
+      `;
+    }
+  })();
+}
+
+async function fetchSummary(summaryId){
+  const r = await apiFetch(`/api/summaries/${summaryId}`);
+  return r.summary;
+}
+async function fetchVersions(summaryId){
+  const r = await apiFetch(`/api/summaries/${summaryId}/versions`);
+  return r.versions || [];
+}
+
+function renderSummaryEditor(idOrNew){
+  if(!AUTH_TOKEN){
+    content.innerHTML = `
+      <h3>Summary</h3>
+      <div class="muted" style="margin-top:10px">Please sign in.</div>
+      <button class="btn primary" style="margin-top:12px" onclick="openLogin()">Sign in</button>
+    `;
+    return;
+  }
+
+  const isNew = (idOrNew === "new" || idOrNew === -1 || idOrNew === null || idOrNew === undefined);
+  const isAdmin = currentRole === "admin";
+
+  content.innerHTML = `
+    <h3>${isNew ? "New" : "Edit"} Summary</h3>
+    <div class="muted" style="margin-top:-8px;margin-bottom:14px">
+      ${isAdmin ? "Admin mode: editing enabled." : "Viewer mode: read-only."}
+    </div>
+    <div class="muted">Loading…</div>
+  `;
+
+  (async ()=>{
+    try{
+      const item = isNew ? { title:"", body:"" } : await fetchSummary(idOrNew);
+      const versions = isNew ? [] : await fetchVersions(idOrNew);
+
+      const titleValue = escapeAttr(item.title || "");
+      const textValue = escapeHtml(item.body || "");
+
+      content.innerHTML = `
+        <h3>${isNew ? "New" : "Edit"} Summary</h3>
+        <div class="muted" style="margin-top:-8px;margin-bottom:14px">
+          ${isAdmin ? "Admin mode: editing enabled." : "Viewer mode: read-only."}
+        </div>
+
+        <input id="titleField" value="${titleValue}" placeholder="Title" style="width:100%;margin-bottom:10px" ${isAdmin ? "" : "disabled"} />
+        <textarea id="textField" style="width:100%;height:220px" ${isAdmin ? "" : "disabled"}>${textValue}</textarea>
+
+        <br><br>
+
+        <div class="row">
+          ${isAdmin ? `
+            <button class="btn primary" onclick="saveSummary('${isNew ? "new" : escapeAttr(item.id)}')">Save</button>
+            <button class="btn" onclick="discardSummary()">Discard</button>
+            ${!isNew ? `<button class="btn danger" onclick="deleteSummary('${escapeAttr(item.id)}')">Delete</button>` : ""}
+            <button class="btn" onclick="window.print()">Export PDF</button>
+            <button class="btn" onclick="goBack()">Back</button>
+          ` : `
+            <button class="btn" onclick="goBack()">Back</button>
+          `}
+        </div>
+
+        ${!isNew && versions.length ? `
+          <hr>
+          <h4>Version History</h4>
+          ${versions.map(v=>`
+            <div class="small" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <span>${new Date(v.saved_at).toLocaleString()}</span>
+              <button class="btn" ${isAdmin ? "" : "disabled"} onclick="restoreVersion('${escapeAttr(item.id)}','${escapeAttr(v.id)}')">Restore</button>
+            </div>
+          `).join("")}
+        ` : ""}
+      `;
+    }catch(e){
+      content.innerHTML = `
+        <h3>Summary</h3>
+        <div class="muted" style="margin-top:10px">Could not load summary: ${escapeHtml(e.message)}</div>
+        <button class="btn" style="margin-top:12px" onclick="goBack()">Back</button>
+      `;
+    }
+  })();
+}
+
+async function saveSummary(idOrNew){
+  if(currentRole !== "admin") return;
+  try{
+    const title = (document.getElementById("titleField")?.value || "").trim();
+    const body = (document.getElementById("textField")?.value || "").trim();
+    if(!title || !body){
+      alert("Title and body are required.");
+      return;
+    }
+    const sectionId = getActiveSectionId();
+    if(!sectionId){
+      alert("Section not found in backend. (Check API sections seed.)");
+      return;
+    }
+
+    if(idOrNew === "new"){
+      await apiFetch(`/api/sections/${sectionId}/summaries`, {
+        method:"POST",
+        body: JSON.stringify({ title, body })
+      });
+    }else{
+      await apiFetch(`/api/summaries/${idOrNew}`, {
+        method:"PUT",
+        body: JSON.stringify({ title, body })
+      });
+    }
+    goBack();
+  }catch(e){
+    alert("Save failed: " + e.message);
+  }
+}
+function discardSummary(){ if(currentRole === "admin") goBack(); }
+
+async function deleteSummary(summaryId){
+  if(currentRole !== "admin") return;
+  if(!confirm("Delete this summary?")) return;
+  try{
+    await apiFetch(`/api/summaries/${summaryId}`, { method:"DELETE" });
+    goBack();
+  }catch(e){
+    alert("Delete failed: " + e.message);
+  }
+}
+
+async function restoreVersion(summaryId, versionId){
+  if(currentRole !== "admin") return;
+  try{
+    await apiFetch(`/api/summaries/${summaryId}/restore/${versionId}`, { method:"POST" });
+    // re-render editor
+    route("summary_edit", summaryId);
+  }catch(e){
+    alert("Restore failed: " + e.message);
+  }
+}
+
+/* ---- Files + Cloud (API-backed) ---- */
+async function fetchFiles(scope, archived=false){
+  const sectionId = getActiveSectionId();
+  if(!sectionId) return [];
+  const q = `scope=${encodeURIComponent(scope)}&archived=${archived ? "true" : "false"}`;
+  const r = await apiFetch(`/api/sections/${sectionId}/files?${q}`);
+  return r.files || [];
+}
+
+function renderFiles(scope="ws", sectionName){
+  if(!AUTH_TOKEN){
+    content.innerHTML = `
+      <h3>${escapeHtml(sectionName || activeSection)} – Import / Export</h3>
+      <div class="muted" style="margin-top:10px">Please sign in.</div>
+      <button class="btn primary" style="margin-top:12px" onclick="openLogin()">Sign in</button>
+    `;
+    return;
+  }
+
+  const canEdit = currentRole === "admin";
+  content.innerHTML = `
+    <h3>${escapeHtml(sectionName || activeSection)} – Import / Export</h3>
+    <p class="muted">Backend-connected file store (S3/MinIO). Upload, export, archive, delete.</p>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <div class="row" style="gap:10px">
+          ${canEdit ? `
+            <input id="fileInput" type="file" multiple />
+            <button class="btn primary" onclick="importFiles('${scope}')">Import files</button>
+          ` : `<div class="small note">Viewer mode: uploads disabled.</div>`}
+        </div>
+        <div class="row">
+          <button class="btn" onclick="route('${scope === "op" ? "op_cloud" : "cloud"}','${escapeAttr(sectionName || activeSection)}')">Go to Cloud</button>
+          <button class="btn" onclick="goBack()">Back</button>
+        </div>
+      </div>
+
+      <div id="fileArea" style="margin-top:12px">
+        <div class="muted">Loading…</div>
+      </div>
+    </div>
+  `;
+
+  (async ()=>{
+    try{
+      const files = await fetchFiles(scope, false);
+      const area = document.getElementById("fileArea");
+      if(!area) return;
+      area.innerHTML = files.length ? `
+        <div class="file-list">
+          ${files.map((f)=>`
+            <div class="file-item">
+              <div class="file-meta">
+                <div class="file-name">${escapeHtml(f.filename)}</div>
+                <div class="file-sub">${escapeHtml(f.mime || "unknown")} • ${escapeHtml(formatBytes(f.size_bytes || 0))} • ${new Date(f.uploaded_at).toLocaleString()}</div>
+              </div>
+              <div class="row">
+                <button class="btn" onclick="downloadFileById('${scope}','${escapeAttr(f.id)}','${escapeAttr(f.filename)}')">Export</button>
+                ${canEdit ? `
+                  <button class="btn" onclick="archiveFile('${scope}','${escapeAttr(f.id)}')">Archive</button>
+                  <button class="btn danger" onclick="deleteFile('${scope}','${escapeAttr(f.id)}')">Delete</button>
+                ` : ``}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      ` : `<div class="muted">No files imported yet.</div>`;
+    }catch(e){
+      const area = document.getElementById("fileArea");
+      if(area) area.innerHTML = `<div class="muted">Could not load files: ${escapeHtml(e.message)}</div>`;
+    }
+  })();
+}
+
+async function importFiles(scope){
+  if(currentRole !== "admin") return;
+  const inp = document.getElementById("fileInput");
+  if(!inp || !inp.files || !inp.files.length) return;
+
+  const sectionId = getActiveSectionId();
+  if(!sectionId){
+    alert("Section not found in backend.");
+    return;
+  }
+
+  const files = Array.from(inp.files);
+  inp.disabled = true;
+  try{
+    for(const file of files){
+      const fd = new FormData();
+      fd.append("file", file, file.name);
+      fd.append("scope", scope === "op" ? "op" : "ws");
+      await apiFetch(`/api/sections/${sectionId}/files`, { method:"POST", body: fd });
+    }
+    inp.value = "";
+    render();
+  }catch(e){
+    alert("Upload failed: " + e.message);
+  }finally{
+    inp.disabled = false;
+  }
+}
+
+async function downloadFileById(scope, fileId, filename){
+  try{
+    const res = await fetch(apiUrl(`/api/files/${fileId}/download`), {
+      headers: { "Authorization": "Bearer " + AUTH_TOKEN }
+    });
+    if(!res.ok) throw new Error("Download failed (HTTP " + res.status + ")");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "export";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }catch(e){
+    alert(e.message);
+  }
+}
+
+async function deleteFile(scope, fileId){
+  if(currentRole !== "admin") return;
+  if(!confirm("Delete this file?")) return;
+  try{
+    await apiFetch(`/api/files/${fileId}`, { method:"DELETE" });
+    render();
+  }catch(e){
+    alert("Delete failed: " + e.message);
+  }
+}
+
+async function archiveFile(scope, fileId){
+  if(currentRole !== "admin") return;
+  try{
+    await apiFetch(`/api/files/${fileId}/archive`, { method:"POST" });
+    render();
+  }catch(e){
+    alert("Archive failed: " + e.message);
+  }
+}
+
+async function restoreFromCloud(scope, fileId){
+  if(currentRole !== "admin") return;
+  try{
+    await apiFetch(`/api/archive/${fileId}/restore`, { method:"POST" });
+    render();
+  }catch(e){
+    alert("Restore failed: " + e.message);
+  }
+}
+
+async function deleteFromCloud(scope, fileId){
+  if(currentRole !== "admin") return;
+  if(!confirm("Delete this archived file permanently?")) return;
+  try{
+    await apiFetch(`/api/files/${fileId}`, { method:"DELETE" });
+    render();
+  }catch(e){
+    alert("Delete failed: " + e.message);
+  }
+}
+
+function renderCloud(scope, sectionName){
+  if(!AUTH_TOKEN){
+    content.innerHTML = `
+      <h3>${escapeHtml(sectionName || activeSection)} – Cloud</h3>
+      <div class="muted" style="margin-top:10px">Please sign in.</div>
+      <button class="btn primary" style="margin-top:12px" onclick="openLogin()">Sign in</button>
+    `;
+    return;
+  }
+
+  content.innerHTML = `
+    <h3>${escapeHtml(sectionName || activeSection)} – Cloud</h3>
+    <p class="muted">Archived files (backend-connected).</p>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <div><b>Archived files</b></div>
+        <div class="row">
+          <button class="btn" onclick="route('${scope === "op" ? "op_import" : "import"}','${escapeAttr(sectionName || activeSection)}')">Go to Import/Export</button>
+          <button class="btn" onclick="goBack()">Back</button>
+        </div>
+      </div>
+
+      <div id="cloudArea" style="margin-top:12px">
+        <div class="muted">Loading…</div>
+      </div>
+    </div>
+  `;
+
+  (async ()=>{
+    try{
+      const files = await fetchFiles(scope, true);
+      const area = document.getElementById("cloudArea");
+      if(!area) return;
+      area.innerHTML = files.length ? `
+        <div class="file-list">
+          ${files.map((f)=>`
+            <div class="file-item">
+              <div class="file-meta">
+                <div class="file-name">${escapeHtml(f.filename)}</div>
+                <div class="file-sub">${escapeHtml(f.mime || "unknown")} • ${escapeHtml(formatBytes(f.size_bytes || 0))} • Archived ${new Date(f.archived_at).toLocaleString()}</div>
+              </div>
+              <div class="row">
+                <button class="btn" onclick="downloadFileById('${scope}','${escapeAttr(f.id)}','${escapeAttr(f.filename)}')">Export</button>
+                ${currentRole === "admin" ? `
+                  <button class="btn" onclick="restoreFromCloud('${scope}','${escapeAttr(f.id)}')">Restore</button>
+                  <button class="btn danger" onclick="deleteFromCloud('${scope}','${escapeAttr(f.id)}')">Delete</button>
+                ` : ``}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      ` : `<div class="muted">No archived files yet.</div>`;
+    }catch(e){
+      const area = document.getElementById("cloudArea");
+      if(area) area.innerHTML = `<div class="muted">Could not load archived files: ${escapeHtml(e.message)}</div>`;
+    }
+  })();
+}
+
+/* ---- Charts (API preview + backend prefs) ---- */
+async function loadChartPrefs(scope="ws"){
+  try{
+    const sectionId = getActiveSectionId();
+    if(!sectionId) return null;
+    const r = await apiFetch(`/api/charts/prefs?sectionId=${encodeURIComponent(sectionId)}&scope=${encodeURIComponent(scope)}`);
+    return r.prefs || null;
+  }catch(e){
+    return null;
+  }
+}
+async function saveChartPrefs(scope, prefs){
+  try{
+    const sectionId = getActiveSectionId();
+    if(!sectionId) return;
+    await apiFetch(`/api/charts/prefs`, {
+      method:"PUT",
+      body: JSON.stringify({ sectionId, scope, prefs })
+    });
+  }catch(e){
+    // non-fatal
+  }
+}
+
+async function fetchChartableFiles(scope="ws"){
+  const files = await fetchFiles(scope, false);
+  return files.filter(f=>{
+    const name = String(f.filename||"").toLowerCase();
+    return name.endsWith(".csv") || name.endsWith(".json") || String(f.mime||"").includes("csv") || String(f.mime||"").includes("json");
+  });
+}
+
+function renderCharts(){
+  const scope = "ws";
+  if(!AUTH_TOKEN){
+    content.innerHTML = `
+      <h3>Charts</h3>
+      <div class="muted" style="margin-top:10px">Please sign in.</div>
+      <button class="btn primary" style="margin-top:12px" onclick="openLogin()">Sign in</button>
+    `;
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="section-row">
+      <div>
+        <h3 style="margin:0">Charts</h3>
+        <div class="meta" id="chartMeta">Loading…</div>
+      </div>
+      <div class="row">
+        <button class="btn" onclick="route('import')">Go to Import / Export</button>
+      </div>
+    </div>
+
+    <div class="tile-grid">
+      ${[
+        tile("Bar Chart", "bar", `route('chart','bar')`, "Compare categories"),
+        tile("Pie Chart", "pie", `route('chart','pie')`, "Share of total"),
+      ].join("")}
+    </div>
+  `;
+
+  (async ()=>{
+    try{
+      const files = await fetchChartableFiles(scope);
+      const el = document.getElementById("chartMeta");
+      if(el) el.textContent = files.length ? `${files.length} dataset file(s) available for charting.` : "No CSV/JSON files found yet. Import one to enable charts.";
+    }catch(e){
+      const el = document.getElementById("chartMeta");
+      if(el) el.textContent = "Could not load datasets: " + e.message;
+    }
+  })();
+}
+
+async function getFileText(fileId){
+  const res = await fetch(apiUrl(`/api/files/${fileId}/download`), { headers: { "Authorization": "Bearer " + AUTH_TOKEN } });
+  if(!res.ok) throw new Error("Could not download file for parsing.");
+  return await res.text();
+}
+
+function renderChart(type){
+  const scope = "ws";
+  if(!AUTH_TOKEN){
+    content.innerHTML = `
+      <h3>Chart</h3>
+      <div class="muted" style="margin-top:10px">Please sign in.</div>
+      <button class="btn primary" style="margin-top:12px" onclick="openLogin()">Sign in</button>
+    `;
+    return;
+  }
+
+  content.innerHTML = `
+    <h3 style="margin:0 0 10px">${escapeHtml(String(type).toUpperCase())} Chart</h3>
+    <div class="panel">
+      <div class="muted">Loading…</div>
+    </div>
+  `;
+
+  (async ()=>{
+    try{
+      const files = await fetchChartableFiles(scope);
+      const prefs = (await loadChartPrefs(scope)) || {};
+      let fileId = prefs.fileId || (files[0]?.id || "");
+      let agg = prefs.agg || "sum";
+      let xCol = prefs.xCol || "";
+      let yCol = prefs.yCol || "";
+
+      // Parse headers client-side (for dropdown UX)
+      let parsedDs = null;
+      if(fileId){
+        const f = files.find(x=>x.id===fileId);
+        const txt = await getFileText(fileId);
+        const isJSON = String(f?.filename||"").toLowerCase().endsWith(".json") || String(f?.mime||"").includes("json");
+        parsedDs = isJSON ? buildDatasetFromJSON(f.filename, txt) : buildDatasetFromCSV(f.filename, txt);
+      }
+
+      if(parsedDs){
+        const cols = parsedDs.columns || [];
+        const firstString = cols.find(c => c.type === "string")?.name || cols[0]?.name || "";
+        const firstNumber = cols.find(c => c.type === "number")?.name || cols[1]?.name || cols[0]?.name || "";
+        if(!xCol) xCol = firstString;
+        if(!yCol) yCol = firstNumber;
+      }
+
+      const fileOptions = [
+        `<option value="">—</option>`,
+        ...files.map(f => `<option value="${escapeAttr(f.id)}"${f.id===fileId?' selected':''}>${escapeHtml(f.filename)}</option>`)
+      ].join("");
+
+      const colOptions = (ds, selectedName, filterFn) => {
+        if(!ds) return `<option value="">—</option>`;
+        return (ds.columns || [])
+          .filter(c => !filterFn || filterFn(c))
+          .map(c => `<option value="${escapeAttr(c.name)}"${c.name===selectedName?' selected':''}>${escapeHtml(c.name)} (${escapeHtml(c.type)})</option>`)
+          .join("") || `<option value="">—</option>`;
+      };
+
+      content.innerHTML = `
+        <h3 style="margin:0 0 10px">${escapeHtml(String(type).toUpperCase())} Chart</h3>
+
+        <div class="panel">
+          <div class="row" style="gap:12px;flex-wrap:wrap">
+            <div style="min-width:220px;flex:1">
+              <div class="small">Dataset file (CSV/JSON)</div>
+              <select id="fileSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.12)">
+                ${fileOptions}
+              </select>
+            </div>
+
+            <div style="min-width:220px;flex:1">
+              <div class="small">X-axis (group)</div>
+              <select id="xSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.12)">
+                ${colOptions(parsedDs, xCol)}
+              </select>
+            </div>
+
+            <div style="min-width:220px;flex:1">
+              <div class="small">Y-axis (metric)</div>
+              <select id="ySel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.12)">
+                ${agg === "count" ? colOptions(parsedDs, yCol) : colOptions(parsedDs, yCol, c=>c.type === "number")}
+              </select>
+            </div>
+
+            <div style="min-width:160px">
+              <div class="small">Aggregation</div>
+              <select id="aggSel" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.12)">
+                ${["sum","avg","min","max","count"].map(a => `<option value="${a}"${a===agg?' selected':''}>${a.toUpperCase()}</option>`).join("")}
+              </select>
+            </div>
+
+            <div style="display:flex;align-items:flex-end;gap:10px">
+              <button class="btn primary" onclick="applyChartConfig('${escapeAttr(type)}')">Apply</button>
+              <button class="btn" onclick="goBack()">Back</button>
+            </div>
+          </div>
+
+          <div class="small" style="margin-top:10px;color:#666">
+            Note: columns are detected in-browser for UI dropdowns; aggregation + insight is computed by the backend.
+          </div>
+        </div>
+
+        <div class="panel" style="min-height:380px">
+          <canvas id="c"></canvas>
+        </div>
+
+        <div id="insights"></div>
+      `;
+
+      // handle file change: reload chart view quickly
+      document.getElementById("fileSel")?.addEventListener("change", ()=>applyChartConfig(type, true));
+
+      // First render
+      await renderChartWithConfig(type, fileId, xCol, yCol, agg);
+    }catch(e){
+      content.innerHTML = `
+        <h3>Chart</h3>
+        <div class="muted" style="margin-top:10px">Could not load chart UI: ${escapeHtml(e.message)}</div>
+        <button class="btn" style="margin-top:12px" onclick="goBack()">Back</button>
+      `;
+    }
+  })();
+}
+
+async function applyChartConfig(type, quickReload=false){
+  const scope = "ws";
+  const fileId = (document.getElementById("fileSel")?.value || "");
+  const xCol = (document.getElementById("xSel")?.value || "");
+  const yCol = (document.getElementById("ySel")?.value || "");
+  const agg = (document.getElementById("aggSel")?.value || "sum");
+
+  const prefs = { fileId, xCol, yCol, agg };
+  await saveChartPrefs(scope, prefs);
+
+  if(quickReload){
+    // rebuild dropdowns based on file
+    renderChart(type);
+    return;
+  }
+  await renderChartWithConfig(type, fileId, xCol, yCol, agg);
+}
+
+async function renderChartWithConfig(type, fileId, xCol, yCol, agg){
+  if(activeChart) activeChart.destroy();
+
+  let labels = ["A","B","C"];
+  let values = [10,20,15];
+  let yLabel = (agg === "count") ? "Count" : (yCol || "Metric");
+
+  let insight = `<div class="muted">Using demo data. Select a dataset file and mapping.</div>`;
+
+  if(fileId && xCol && (agg === "count" || yCol)){
+    try{
+      const r = await apiFetch(`/api/charts/preview`, {
+        method:"POST",
+        body: JSON.stringify({ fileId, xCol, yCol, agg, limit: 12 })
+      });
+      labels = r.labels || labels;
+      values = r.values || values;
+      insight = `<div class="panel"><b>Insights</b><div class="small" style="margin-top:6px">${escapeHtml(r.insight || "")}</div></div>`;
+    }catch(e){
+      insight = `<div class="muted">Chart preview failed: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  const canvas = document.getElementById("c");
+  if(!canvas) return;
+
+  activeChart = new Chart(canvas, {
+    type,
+    data: { labels, datasets: [{ label: yLabel, data: values }] },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ display:true } }
+    }
+  });
+  canvas.parentElement.style.minHeight = "340px";
+
+  const insights = document.getElementById("insights");
+  if(insights) insights.innerHTML = insight;
+}
+
+/* ---- Route switch compatibility: accept old index args for summary_edit ---- */
+const _render_orig = render;
+render = function(){
+  // enforce backend section title aliasing in UI state (no visual change needed)
+  if(activeSection){
+    // keep UI label as-is, only map when calling backend
+  }
+
+  // If user is signed in, reflect role in any UI pieces that depend on currentUser/currentRole
+  return _render_orig();
+};
+
+/* ---- Boot on load: if token exists, hydrate user/sections ---- */
+(async ()=>{
+  const ok = await bootstrapAuth();
+  // Pre-fill API field for convenience
+  const apiField = document.getElementById("apiField");
+  if(apiField) apiField.value = API_BASE;
+  if(ok) render();
+})();
+/* =================== END BACKEND WIRING =================== */
+
+/* ---------- INIT ---------- */
+injectSidebarIcons();
+currentRoute = { type: "home" };
+render();
+</script>
+</body>
+</html>
