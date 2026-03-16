@@ -480,11 +480,21 @@ body{
 .manage-inline{position:relative;display:block;margin-top:12px;max-width:980px}
 .manage-inline .input{width:100%;padding-right:180px}
 .manage-inline .btn{position:absolute;right:0;top:0;height:100%;min-width:164px;border-top-left-radius:0;border-bottom-left-radius:0}
-.search-overlay,.notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);display:none;align-items:flex-start;justify-content:center;z-index:80;padding-top:96px}
-.search-panel,.notif-panel{width:min(720px,calc(100vw - 32px));max-height:70vh;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:24px;background:linear-gradient(180deg,rgba(17,27,52,.98),rgba(10,16,33,.98));box-shadow:0 18px 48px rgba(0,0,0,.42);padding:18px}
-.search-results{display:flex;flex-direction:column;gap:10px;margin-top:14px}
-.search-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03);cursor:pointer}
-.search-result:hover{background:rgba(255,255,255,.05)}
+.search-overlay{position:fixed;inset:0;background:rgba(2,8,20,.12);display:none;align-items:flex-start;justify-content:center;z-index:90;padding-top:86px}
+.search-shell{width:min(760px,calc(100vw - 40px));display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.search-animbar{pointer-events:auto;width:32px;height:46px;opacity:.25;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:18px;font-weight:600;letter-spacing:.01em;transition:width .34s cubic-bezier(.2,.9,.2,1),opacity .24s ease,transform .24s ease;border-radius:16px;transform:translateY(4px)}
+.search-overlay.open .search-animbar{width:min(520px,calc(100vw - 56px));opacity:1;transform:translateY(0);border:1px solid rgba(255,255,255,.28);border-radius:16px;background:rgba(255,255,255,.96);box-shadow:0 18px 42px rgba(0,0,0,.18)}
+.search-stage{pointer-events:auto;width:min(520px,calc(100vw - 56px));max-width:100%;margin-top:10px;opacity:0;transform:translateY(-6px);transition:opacity .18s ease,transform .18s ease}
+.search-overlay.open .search-stage{opacity:1;transform:translateY(0)}
+.search-box{display:flex;align-items:center;gap:10px;height:40px;border:1px solid rgba(15,23,42,.16);border-radius:10px;background:rgba(255,255,255,.96);padding:0 12px;box-shadow:0 10px 24px rgba(0,0,0,.14)}
+.search-box input{flex:1;border:none;outline:none;background:transparent;color:#111827;font-size:14px}
+.search-box .search-icon{color:#64748b;font-size:15px;display:flex;align-items:center}
+.search-results{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:52vh;overflow:auto}
+.search-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(180deg,rgba(17,27,52,.98),rgba(10,16,33,.98));cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.search-result:hover{background:linear-gradient(180deg,rgba(24,35,66,.98),rgba(13,20,40,.98))}
+.search-result .small{color:#9ca3af}
+.notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.24);backdrop-filter:blur(8px);display:none;align-items:flex-start;justify-content:flex-end;z-index:85;padding-top:72px;padding-right:18px}
+.notif-panel{width:min(420px,calc(100vw - 28px));max-height:70vh;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:24px;background:linear-gradient(180deg,rgba(17,27,52,.98),rgba(10,16,33,.98));box-shadow:0 18px 48px rgba(0,0,0,.42);padding:18px}
 .notif-item{padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03)}
 .table td.actions .btn.danger{border-color:rgba(239,68,68,.22);color:#fecaca}
 
@@ -496,7 +506,7 @@ body{
 <section id="loginScreen" class="login-wrap" aria-label="Login">
   <div class="login-card">
     <h1 class="login-title">Sign in</h1>
-    <p class="login-sub">DataMac 3.0 • BUP workspace</p>
+    <p class="login-sub"></p>
 
     <div class="field">
       <span>👤</span>
@@ -739,8 +749,6 @@ function boot(){
     });
   });
 
-  $('topSearchBtn')?.addEventListener('click', ()=> toast('Search will be configured during testing setup.'));
-  $('topNotifyBtn')?.addEventListener('click', ()=> toast('No new notifications right now.'));
   $('topSettingsBtn')?.addEventListener('click', ()=> renderProfile());
 
   el.loginBtn.addEventListener('click', onLogin);
@@ -756,11 +764,11 @@ function boot(){
   document.getElementById('topSearchBtn')?.addEventListener('click', openSearchOverlay);
   document.getElementById('topNotifyBtn')?.addEventListener('click', openNotifOverlay);
   document.getElementById('topSettingsBtn')?.addEventListener('click', ()=> toast('Settings panel will be expanded next.'));
-  document.getElementById('searchCloseBtn')?.addEventListener('click', closeSearchOverlay);
   document.getElementById('notifCloseBtn')?.addEventListener('click', closeNotifOverlay);
   document.getElementById('searchOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='searchOverlay') closeSearchOverlay(); });
   document.getElementById('notifOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='notifOverlay') closeNotifOverlay(); });
   document.getElementById('searchInputModal')?.addEventListener('input', renderSearchResults);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeSearchOverlay(); closeNotifOverlay(); } });
 
   el.profileBtn.addEventListener('click', ()=>{ renderProfile(); setActive('profile'); });
   el.brandHome.addEventListener('click', ()=>{ navigate('overview'); });
@@ -970,25 +978,24 @@ function clearOverviewSlideTimers(){
 
 function getOverviewNewsItems(){
   const study = activeStudy();
-  const latest = getLatestDataset(state.activeStudyId);
   return [
     {
-      title: 'News',
-      headline: study ? `${study.name} is ready for testing` : 'Workspace ready',
-      body: latest ? `Latest dataset connected: ${latest.name}. Dashboard and worksheet are available for review.` : 'Upload a dataset when you are ready to begin worksheet and dashboard testing.',
-      meta: latest ? 'Latest data available' : 'Awaiting dataset'
+      title: 'Update',
+      headline: 'Rebecca joined BUP Operations',
+      body: 'A new employee account has been created and is now available for assignment and testing inside DataMac.',
+      meta: 'New employee introduction'
+    },
+    {
+      title: 'Activity',
+      headline: study ? `${study.name} hosted a motivational speech` : 'A study team hosted a motivational speech',
+      body: 'Teams shared key highlights and attendance notes. This update keeps the workspace informed without cluttering the dashboard.',
+      meta: 'Study activity update'
     },
     {
       title: 'Update',
-      headline: 'Calendar and worksheet are available from Dashboard',
-      body: 'Plan events, review worksheet data, and move through daily workflows from one dashboard view.',
-      meta: 'Dashboard tools enabled'
-    },
-    {
-      title: 'Update',
-      headline: 'Data-Club approvals are active',
-      body: 'Compose approvals from Data-Club and review them from Pending when needed.',
-      meta: `${(store.pendingApprovals||[]).length || 0} pending items`
+      headline: 'DataMac testing workspace is ready',
+      body: 'Dashboard, calendar, worksheet, files, and approvals are available for structured user testing.',
+      meta: 'Testing environment'
     }
   ];
 }
@@ -998,24 +1005,25 @@ function getOverviewActivityItems(){
   const datasets = Object.values(store.datasets[studyId] || {});
   const latest = datasets[0];
   const files = countFiles(studyId);
+  const approvals = (store.pendingApprovals||[]).length || 0;
   return [
     {
       title: 'Recent Activity',
-      headline: latest ? `${latest.name} was imported ${timeAgo(latest.addedAt)}` : 'No recent dataset imports',
-      body: latest ? `Detected ${fmtInt(latest.rows.length)} rows and ${fmtInt(latest.columns.length)} columns in the active study context.` : 'Your latest uploaded dataset will appear here.',
-      meta: latest ? 'Latest import' : 'No activity yet'
+      headline: latest ? `${latest.name} is the latest imported dataset` : 'No recent dataset activity yet',
+      body: latest ? `The active study currently has ${fmtInt(latest.rows.length)} rows and ${fmtInt(latest.columns.length)} columns ready for worksheet and chart testing.` : 'Imported datasets will begin appearing here once users start testing uploads.',
+      meta: latest ? 'Dataset activity' : 'Fresh workspace'
     },
     {
       title: 'Recent Activity',
       headline: files ? `${fmtInt(files)} file${files===1?'':'s'} available in Files / Folders` : 'No files uploaded yet',
-      body: files ? 'Files are ready for worksheet, chart, and approval workflows.' : 'Uploaded files will appear here once added to the active study.',
-      meta: files ? 'Files available' : 'Waiting for files'
+      body: files ? 'Files are ready for worksheet, chart, and approval workflows.' : 'File activity will appear here after the first upload.',
+      meta: files ? 'File activity' : 'Awaiting first upload'
     },
     {
       title: 'Recent Activity',
-      headline: `${(store.pendingApprovals||[]).length || 0} pending approvals`,
-      body: 'Review submitted requests from Data-Club whenever approvals are required.',
-      meta: 'Approval workflow'
+      headline: approvals ? `${fmtInt(approvals)} approval request${approvals===1?'':'s'} pending` : 'No recent approval activity yet',
+      body: approvals ? 'Submitted requests are ready for review from Data-Club Pending.' : 'Approvals and workflow actions will appear here after users begin using Data-Club.',
+      meta: approvals ? 'Approval activity' : 'Fresh workspace'
     }
   ];
 }
@@ -1043,8 +1051,8 @@ function renderOverviewSlidePanel(id, heading, subheading, items){
           ${items.map((_, idx)=>`<button class="icon-btn overview-dot ${idx===0?'active':''}" data-target="${id}" data-go="${idx}" style="width:12px;height:12px;border-radius:999px;padding:0;min-width:12px"></button>`).join('')}
         </div>
         <div class="row" style="gap:10px">
-          <button class="btn" data-slide-prev="${id}">Prev</button>
-          <button class="btn" data-slide-next="${id}">Next</button>
+          <button class="btn" data-slide-prev="${id}" aria-label="Previous slide">←</button>
+          <button class="btn" data-slide-next="${id}" aria-label="Next slide">→</button>
         </div>
       </div>
     </div>
@@ -3768,10 +3776,16 @@ function openSearchOverlay(){
   const ov = document.getElementById('searchOverlay');
   if(!ov) return;
   ov.style.display='flex';
+  requestAnimationFrame(()=>ov.classList.add('open'));
   renderSearchResults();
-  setTimeout(()=>document.getElementById('searchInputModal')?.focus(),20);
+  setTimeout(()=>document.getElementById('searchInputModal')?.focus(),180);
 }
-function closeSearchOverlay(){ const ov=document.getElementById('searchOverlay'); if(ov) ov.style.display='none'; }
+function closeSearchOverlay(){
+  const ov=document.getElementById('searchOverlay');
+  if(!ov) return;
+  ov.classList.remove('open');
+  setTimeout(()=>{ if(!ov.classList.contains('open')) ov.style.display='none'; },220);
+}
 function renderSearchResults(){
   const q = String(document.getElementById('searchInputModal')?.value || '').trim().toLowerCase();
   const resultsEl = document.getElementById('searchResults'); if(!resultsEl) return;
@@ -3779,15 +3793,16 @@ function renderSearchResults(){
   const studies = (store.studies||[]).filter(s=>s.status!=='deleted').map(s=>({title:s.name, sub:'Study / Project', action:()=>{ state.activeStudyId=s.id; navigate('overview'); closeSearchOverlay(); }}));
   const users = (store.users||[]).filter(u=>u.role!=='owner').map(u=>({title:u.fullName||u.email, sub:u.email, action:()=>{ if(state.user && (state.view==='dataclub' || getNavForUser(state.user).some(x=>x.key==='dataclub'))){ navigate('dataclub'); } closeSearchOverlay(); }}));
   const all = [...nav, ...studies, ...users].filter(r=>!q || `${r.title} ${r.sub}`.toLowerCase().includes(q)).slice(0,12);
-  resultsEl.innerHTML = all.length ? all.map((r,i)=>`<button class="search-result" data-search-idx="${i}"><span><b>${escapeHtml(r.title)}</b><div class="small">${escapeHtml(r.sub)}</div></span><span class="small">Open</span></button>`).join('') : `<div class="notif-item">No matching results.</div>`;
+  if(!q){ resultsEl.innerHTML = `<div class="notif-item" style="text-align:center;color:#9ca3af">No recent searches.</div>`; return; }
+  resultsEl.innerHTML = all.length ? all.map((r,i)=>`<button class="search-result" data-search-idx="${i}"><span><b>${escapeHtml(r.title)}</b><div class="small">${escapeHtml(r.sub)}</div></span><span class="small">Open</span></button>`).join('') : `<div class="notif-item" style="text-align:center;color:#9ca3af">No results found.</div>`;
   resultsEl.querySelectorAll('[data-search-idx]').forEach((btn,i)=>btn.addEventListener('click', ()=>all[i].action()));
 }
 function openNotifOverlay(){
   const ov = document.getElementById('notifOverlay');
   const list = document.getElementById('notifList');
   if(!ov || !list) return;
-  const notes = getNotifications();
-  list.innerHTML = notes.length ? notes.map((n,i)=>`<button class="notif-item" data-note-idx="${i}" style="text-align:left"><div style="font-weight:900">${escapeHtml(n.title)}</div><div class="small" style="margin-top:4px">${escapeHtml(n.body)}</div><div class="small" style="margin-top:6px">${escapeHtml(timeAgo(n.time))}</div></button>`).join('') : `<div class="notif-item">No notifications yet.</div>`;
+  const notes = [];
+  list.innerHTML = notes.length ? notes.map((n,i)=>`<button class="notif-item" data-note-idx="${i}" style="text-align:left"><div style="font-weight:900">${escapeHtml(n.title)}</div><div class="small" style="margin-top:4px">${escapeHtml(n.body)}</div><div class="small" style="margin-top:6px">${escapeHtml(timeAgo(n.time))}</div></button>`).join('') : `<div class="notif-item" style="text-align:center;color:#9ca3af">No notifications.</div>`;
   list.querySelectorAll('[data-note-idx]').forEach((btn,i)=>btn.addEventListener('click', ()=> notes[i].action && notes[i].action()));
   ov.style.display='flex';
 }
@@ -3842,18 +3857,15 @@ document.addEventListener('DOMContentLoaded', boot);
 </script>
 
 <div id="searchOverlay" class="search-overlay">
-  <div class="search-panel">
-    <div class="row" style="justify-content:space-between;align-items:center">
-      <div>
-        <div class="h2">Search DataMac</div>
-        <div class="small">Find pages, studies, and users.</div>
+  <div class="search-shell">
+    <div class="search-animbar">What are you looking for?</div>
+    <div class="search-stage">
+      <div class="search-box">
+        <input id="searchInputModal" placeholder="Search" />
+        <span class="search-icon">⌕</span>
       </div>
-      <button class="btn" id="searchCloseBtn">Close</button>
+      <div id="searchResults" class="search-results"></div>
     </div>
-    <div class="card" style="margin-top:12px;padding:10px 12px;background:rgba(255,255,255,.03)">
-      <input id="searchInputModal" class="input" placeholder="Search pages, studies, users..." />
-    </div>
-    <div id="searchResults" class="search-results"></div>
   </div>
 </div>
 <div id="notifOverlay" class="notif-overlay">
@@ -3863,7 +3875,7 @@ document.addEventListener('DOMContentLoaded', boot);
         <div class="h2">Notifications</div>
         <div class="small">Recent approvals, users, studies, and system events.</div>
       </div>
-      <button class="btn" id="notifCloseBtn">Close</button>
+      <button class="btn" id="notifCloseBtn" aria-label="Close notifications" style="width:42px;min-width:42px;padding:0;font-size:22px;line-height:1">×</button>
     </div>
     <div id="notifList" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
   </div>
