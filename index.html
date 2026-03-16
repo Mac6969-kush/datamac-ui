@@ -460,6 +460,34 @@ body{
 .overview-dot.active{background:rgba(var(--accent-rgb),.95);box-shadow:0 0 0 4px rgba(var(--accent-rgb),.16)}
 .overview-slide{animation:fadeOverview .25s ease}
 @keyframes fadeOverview{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.manage-tabs{display:flex;gap:10px;margin-top:14px}
+.manage-tab{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--text);padding:10px 14px;border-radius:999px;cursor:pointer;font-weight:800}
+.manage-tab.active{background:rgba(var(--accent-rgb),.14);border-color:rgba(var(--accent-rgb),.32)}
+.manage-slider-shell{overflow:hidden;position:relative;margin-top:14px}
+.manage-slider-track{display:flex;width:200%;transition:transform .35s ease}
+.manage-slider-track.show-users{transform:translateX(-50%)}
+.manage-slide{width:50%;padding-right:12px}
+.manage-form-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;margin-top:12px}
+.manage-card-lite{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:16px;padding:16px}
+.ad-select,.ad-input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(10,15,25,.40);color:var(--text);outline:none}
+.ad-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.canvas-wrap{width:100%;overflow:hidden;border-radius:18px}
+.canvas-wrap{position:relative;max-width:100%;overflow:hidden;border-radius:18px}
+.canvas-wrap canvas{display:block !important;width:100% !important;max-width:100% !important;height:auto !important}
+.card,.tile{overflow:hidden}
+.manage-name-input{min-width:760px;width:100%;padding-right:180px}
+.manage-inline{position:relative;display:block;margin-top:12px;max-width:980px}
+.manage-inline .input{width:100%;padding-right:180px}
+.manage-inline .btn{position:absolute;right:0;top:0;height:100%;min-width:164px;border-top-left-radius:0;border-bottom-left-radius:0}
+.search-overlay,.notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);display:none;align-items:flex-start;justify-content:center;z-index:80;padding-top:96px}
+.search-panel,.notif-panel{width:min(720px,calc(100vw - 32px));max-height:70vh;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:24px;background:linear-gradient(180deg,rgba(17,27,52,.98),rgba(10,16,33,.98));box-shadow:0 18px 48px rgba(0,0,0,.42);padding:18px}
+.search-results{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.search-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03);cursor:pointer}
+.search-result:hover{background:rgba(255,255,255,.05)}
+.notif-item{padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03)}
+.table td.actions .btn.danger{border-color:rgba(239,68,68,.22);color:#fecaca}
+
 </style>
 </head>
 <body>
@@ -469,13 +497,6 @@ body{
   <div class="login-card">
     <h1 class="login-title">Sign in</h1>
     <p class="login-sub">DataMac 3.0 • BUP workspace</p>
-
-    <div class="login-row" aria-label="Quick profiles">
-      <button class="quick-btn" data-quick="owner">Owner</button>
-      <button class="quick-btn" data-quick="admin">Admin</button>
-      <button class="quick-btn" data-quick="manager">Managerial</button>
-      <button class="quick-btn" data-quick="finance">Regular user</button>
-    </div>
 
     <div class="field">
       <span>👤</span>
@@ -642,6 +663,8 @@ function getEmployeeType(u){
   return u?.employeeType || (u?.workspace === 'study' ? 'study' : 'ops');
 }
 
+function roleTitle(role){ return ({owner:'Owner',admin:'Admin',managerial:'Managerial',regular:'Regular user'})[role] || role; }
+
 function canManage(u){
   return u && (u.role === 'owner' || u.role === 'admin');
 }
@@ -730,6 +753,14 @@ function boot(){
   });
 
   initAIWidget();
+  document.getElementById('topSearchBtn')?.addEventListener('click', openSearchOverlay);
+  document.getElementById('topNotifyBtn')?.addEventListener('click', openNotifOverlay);
+  document.getElementById('topSettingsBtn')?.addEventListener('click', ()=> toast('Settings panel will be expanded next.'));
+  document.getElementById('searchCloseBtn')?.addEventListener('click', closeSearchOverlay);
+  document.getElementById('notifCloseBtn')?.addEventListener('click', closeNotifOverlay);
+  document.getElementById('searchOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='searchOverlay') closeSearchOverlay(); });
+  document.getElementById('notifOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='notifOverlay') closeNotifOverlay(); });
+  document.getElementById('searchInputModal')?.addEventListener('input', renderSearchResults);
 
   el.profileBtn.addEventListener('click', ()=>{ renderProfile(); setActive('profile'); });
   el.brandHome.addEventListener('click', ()=>{ navigate('overview'); });
@@ -1206,7 +1237,7 @@ function renderDashboard(){
       </div>
 
       <div class="grid" style="margin-top:14px">
-        <div class="card span-8">
+        <div class="card span-12">
           <div class="h2">Chart workspace</div>
           <div class="small">Quick view</div>
           <div class="hr"></div>
@@ -1217,15 +1248,6 @@ function renderDashboard(){
             <select class="select" id="dashY"></select>
             <button class="btn" id="dashRender">Render line</button>
           </div>
-        </div>
-        <div class="card span-4">
-          <div class="h2">Widgets</div>
-          <div class="small">Slots for department/study-specific widgets.</div>
-          <div class="hr"></div>
-          <div class="badge">Study</div>
-          <div class="kv"><span>Participants</span><b>—</b></div>
-          <div class="kv"><span>Visits</span><b>—</b></div>
-          <div class="kv"><span>Outcomes</span><b>—</b></div>
         </div>
       </div>
 
@@ -1737,12 +1759,23 @@ function estimateInvoiceLoad(ds){
   return fmtInt(Math.max(0, Math.round(ds.rows.length/3)));
 }
 
+function fitCanvasToWrap(canvasId, targetHeight){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return null;
+  const wrap = canvas.parentElement;
+  const width = Math.max(320, Math.floor((wrap?.clientWidth || canvas.width) - 4));
+  canvas.width = width;
+  canvas.height = targetHeight || canvas.height || 320;
+  return canvas;
+}
+
 function bindDashboardChart(dataset){
   const canvas = document.getElementById('dashCanvas');
   const ySel = document.getElementById('dashY');
   const btn = document.getElementById('dashRender');
   if(!canvas || !ySel || !btn) return;
 
+  fitCanvasToWrap('dashCanvas', 320);
   const ctx = canvas.getContext('2d');
   clearCanvas(ctx, canvas);
   drawEmptyChartState(ctx, canvas, dataset ? 'Select a numeric column and render.' : 'No dataset loaded.');
@@ -1781,32 +1814,38 @@ function bindDashboardChart(dataset){
   btn.addEventListener('click', ()=>{
     const col = ySel.value;
     const series = dataset.rows.map(r => toNumber(r[col])).filter(v=>Number.isFinite(v));
+    fitCanvasToWrap('dashCanvas', 320);
     clearCanvas(ctx, canvas);
     drawLineChart(ctx, canvas, series, { title: `${dataset.name} • ${col}` , fill:false });
   });
 }
 
+
 function renderDataClub(){
   setContext('DataMac • Data-Club');
-  const dc = state.dataclub || { selected:'finance', tab:'received', search:'', mode:null, pendingDrafts:[] };
-  const users = [
-    { id:'admin', label:'Admin', sub:'Owner / approvals', role:'admin', status:'busy', dot:'#f59e0b' },
-    { id:'finance', label:'Finance', sub:'Operations user', role:'ops', status:'online', dot:'#22c55e' },
-    { id:'studya', label:'Study A', sub:'Study/project user', role:'study', status:'online', dot:'#38bdf8' },
-  ];
-  const selected = users.find(u=>u.id===dc.selected) || users[0];
+  const dc = state.dataclub || { selected:null, tab:'received', search:'', mode:null };
+  const memberUsers = (store.users || []).filter(u=>u.role!=='owner').map(u=>({
+    id: u.id,
+    label: u.fullName || u.display || u.email,
+    sub: u.email,
+    role: u.role,
+    status: getEmployeeType(u)==='ops' ? 'online' : 'active',
+    dot: u.role==='admin' ? '#a78bfa' : (getEmployeeType(u)==='ops' ? '#22c55e' : '#38bdf8'),
+    email: u.email
+  })).sort((a,b)=>a.label.localeCompare(b.label));
+  if(!memberUsers.length){
+    el.content.innerHTML = `<div class="card"><div class="h1">Data-Club</div><p class="p">No members found in the active directory yet.</p></div>`;
+    return;
+  }
+  if(!dc.selected || !memberUsers.some(u=>u.id===dc.selected)) dc.selected = memberUsers[0].id;
+  const selected = memberUsers.find(u=>u.id===dc.selected) || memberUsers[0];
   const q = String(dc.search||'').trim().toLowerCase();
-  const filteredUsers = users.filter(u => !q || `${u.label} ${u.sub} ${u.role}`.toLowerCase().includes(q));
+  const filteredUsers = memberUsers.filter(u => !q || `${u.label} ${u.sub} ${u.email}`.toLowerCase().includes(q));
+  const pendingList = (store.pendingApprovals || []).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const tabs = [
     { key:'sent', label:'Sent' },
     { key:'received', label:'Received' },
-    { key:'pending', label:'Pending', badge: 3 + ((dc.pendingDrafts||[]).length) },
-  ];
-  const pendingItems = [
-    ...(dc.pendingDrafts || []),
-    { id:'p1', type:'Budget approval', by:'Finance', title:'Approve Q2 field equipment budget', detail:'P80,000 requested for field equipment purchase.', primary:'Approve', secondary:'Reject', tertiary:'Comment', stage:'Awaiting finance decision' },
-    { id:'p2', type:'Access request', by:'Study A', title:'Grant access to Finance_Budget_2026 dataset', detail:'Needed for study planning alignment and timeline forecasting.', primary:'Grant Access', secondary:'Deny', tertiary:'Comment', stage:'Awaiting admin review' },
-    { id:'p3', type:'Workspace request', by:'Admin', title:'Create new study workspace: Malaria Follow-up', detail:'Provision folders, calendar template, charts, summary, and files shell.', primary:'Approve', secondary:'Reject', tertiary:'Assign', stage:'Awaiting provisioning' },
+    { key:'pending', label:'Pending', badge: pendingList.length },
   ];
 
   if(dc.mode === 'composeApproval'){
@@ -1819,7 +1858,7 @@ function renderDataClub(){
                 <button class="btn" id="dcComposeBack">← Back</button>
                 <div>
                   <div class="h2">Compose approval request</div>
-                  <div class="small">Prepare a professional approval request and attach a file from your computer.</div>
+                  <div class="small">Send a clean approval request and attach a file from your computer.</div>
                 </div>
               </div>
               <div class="row" style="gap:10px;">
@@ -1903,18 +1942,21 @@ function renderDataClub(){
       const body = (document.getElementById('dcApprovalBody')?.value || '').trim();
       const action = (document.getElementById('dcApprovalAction')?.value || 'Approve').trim();
       if(!subject) return toast('Add a subject first.');
-      const draft = {
-        id: 'd' + Date.now(),
+      store.pendingApprovals = store.pendingApprovals || [];
+      store.pendingApprovals.unshift({
+        id: 'p' + Date.now(),
         type,
-        by: state.user.display || 'You',
+        by: state.user.fullName || state.user.display || state.user.email,
+        to,
         title: subject,
         detail: body || 'Approval request submitted from Data-Club.',
         primary: action,
         secondary:'Reject',
         tertiary:'Comment',
-        stage:`Awaiting ${to} review${state.dataclub.composeFileName ? ' • Attached: ' + state.dataclub.composeFileName : ''}`
-      };
-      state.dataclub.pendingDrafts = [draft, ...(state.dataclub.pendingDrafts || [])];
+        stage:`Awaiting ${to} review${state.dataclub.composeFileName ? ' • Attached: ' + state.dataclub.composeFileName : ''}`,
+        createdAt: Date.now()
+      });
+      saveStore();
       state.dataclub.mode = null;
       state.dataclub.tab = 'pending';
       state.dataclub.composeSubject = '';
@@ -1931,9 +1973,7 @@ function renderDataClub(){
       <div class="dc-layout" style="grid-template-columns:minmax(320px,420px) minmax(0,1fr);">
         <aside class="dc-member-pane" style="border-right:1px solid var(--line);padding-right:18px;">
           <div class="dc-top" style="padding:0 0 14px 0;border:none;min-height:auto;">
-            <div>
-              <div class="h2" style="margin:0">Members</div>
-            </div>
+            <div><div class="h2" style="margin:0">Members</div></div>
           </div>
           <div class="card" style="padding:10px 12px;margin-bottom:14px;background:rgba(255,255,255,.03)">
             <input id="dcMemberSearch" class="input" placeholder="Find user" value="${escapeAttr(dc.search||'')}" />
@@ -1942,7 +1982,7 @@ function renderDataClub(){
             ${filteredUsers.map(u=>`
               <div class="nav-btn ${u.id===selected.id ? 'active' : ''}" style="justify-content:space-between;align-items:center;text-align:left;width:100%;min-height:78px;cursor:default;">
                 <button data-dc-user="${u.id}" style="display:flex;align-items:center;gap:12px;background:transparent;border:none;color:inherit;cursor:pointer;flex:1;min-width:0;">
-                  <span class="nav-ic" style="position:relative;font-weight:900;font-size:14px;">${escapeHtml(u.label.slice(0,1))}<span style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:${u.dot};border:2px solid #0d1324"></span></span>
+                  <span class="nav-ic" style="position:relative;font-weight:900;font-size:14px;">${escapeHtml((u.label||'U').slice(0,1))}<span style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:${u.dot};border:2px solid #0d1324"></span></span>
                   <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;min-width:0;">
                     <span style="font-weight:900">${escapeHtml(u.label)}</span>
                     <span class="small" style="white-space:normal">${escapeHtml(u.sub)}</span>
@@ -1957,26 +1997,26 @@ function renderDataClub(){
           <div style="padding:18px 20px;display:flex;flex-direction:column;gap:16px;flex:1;min-height:0;">
             ${dc.tab==='pending' ? `
               <div class="grid" style="grid-template-columns:repeat(12,minmax(0,1fr));margin-top:0;">
-                ${pendingItems.map(item=>`
+                ${pendingList.length ? pendingList.map(item=>`
                   <div class="span-6">
                     <div class="card" style="height:100%;background:rgba(255,255,255,.02)">
                       <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px;">
                         <div>
                           <div class="small">${escapeHtml(item.type)}</div>
                           <div class="h3" style="margin:6px 0 4px 0">${escapeHtml(item.title)}</div>
-                          <div class="small">Requested by ${escapeHtml(item.by)}</div>
+                          <div class="small">Requested by ${escapeHtml(item.by || 'User')}</div>
                         </div>
-                        <span class="pill">${escapeHtml(item.stage)}</span>
+                        <span class="pill">${escapeHtml(item.stage || 'Awaiting review')}</span>
                       </div>
-                      <div style="margin-top:14px;color:var(--muted);line-height:1.6">${escapeHtml(item.detail)}</div>
+                      <div style="margin-top:14px;color:var(--muted);line-height:1.6">${escapeHtml(item.detail || '')}</div>
                       <div class="row" style="margin-top:18px;gap:10px;flex-wrap:wrap;">
-                        <button class="btn primary">${escapeHtml(item.primary)}</button>
-                        <button class="btn">${escapeHtml(item.secondary)}</button>
-                        <button class="btn">${escapeHtml(item.tertiary)}</button>
+                        <button class="btn primary">${escapeHtml(item.primary || 'Approve')}</button>
+                        <button class="btn">${escapeHtml(item.secondary || 'Reject')}</button>
+                        <button class="btn">${escapeHtml(item.tertiary || 'Comment')}</button>
                       </div>
                     </div>
                   </div>
-                `).join('')}
+                `).join('') : `<div class="span-12"><div class="card" style="background:rgba(255,255,255,.02)"><div class="h2">Pending</div><div class="small" style="margin-top:6px">No approvals or requests yet.</div></div></div>`}
               </div>
             ` : `<div style="flex:1"></div>`}
           </div>
@@ -2008,6 +2048,8 @@ function renderDataClub(){
   }));
 }
 
+
+
 function renderManage(){
   if(!(state.user.role === 'owner' || state.user.role === 'admin')){
     setContext('DataMac • Restricted');
@@ -2018,66 +2060,105 @@ function renderManage(){
   setContext('DataMac • Manage');
   const users = (store.users || []).slice().sort((a,b)=> String(a.email).localeCompare(String(b.email)));
   const studies = store.studies.filter(s=>s.status!=='deleted');
+  const currentPanel = state.managePanel || 'studies';
 
   el.content.innerHTML = `
     <div class="card">
-      <div class="row" style="justify-content:space-between">
+      <div class="row" style="justify-content:space-between;align-items:flex-start">
         <div>
           <div class="h1">Manage</div>
-          <p class="p">Create studies, add user accounts, and review the active directory.</p>
+          <p class="p">Create studies, add user accounts, and manage the active directory.</p>
         </div>
       </div>
 
-      <div class="grid">
-        <div class="card span-6">
-          <div class="h2">Studies / Projects</div>
-          <div class="row" style="margin-top:12px">
-            <input class="input" id="newStudyName" placeholder="New study name" style="flex:1; min-width:240px" />
-            <button class="btn primary" id="addStudy">Add study</button>
-          </div>
-          <div class="hr"></div>
-          <table class="table">
-            <thead><tr><th>Name</th><th>Status</th><th>Created</th><th class="actions">Actions</th></tr></thead>
-            <tbody>
-              ${studies.map(s=>`<tr data-id="${escapeHtml(s.id)}"><td><b>${escapeHtml(s.name)}</b></td><td>${escapeHtml(s.status)}</td><td>${escapeHtml(new Date(s.createdAt).toLocaleDateString())}</td><td class="actions"><button class="btn" data-act="rename">Rename</button><button class="btn" data-act="toggle">${s.status==='archived'?'Restore':'Archive'}</button></td></tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div class="card span-6">
-          <div class="h2">Add user account</div>
-          <div class="small" style="margin-top:4px">Employee type controls the UI shell. Role controls rights.</div>
-          <div class="grid" style="margin-top:12px">
-            <div class="span-6"><input class="input" id="manageUserName" placeholder="Full name" /></div>
-            <div class="span-3"><input class="input" id="manageUserEmailLocal" placeholder="Email username" /></div>
-            <div class="span-3"><div class="input" style="display:flex;align-items:center;opacity:.8">@datamac.local</div></div>
-            <div class="span-4"><select class="select" id="manageUserRole"><option value="owner">Owner</option><option value="admin">Admin</option><option value="managerial">Managerial</option><option value="regular" selected>Regular user</option></select></div>
-            <div class="span-4"><select class="select" id="manageUserEmployeeType"><option value="ops" selected>Operations employee</option><option value="study">Study / Project employee</option></select></div>
-            <div class="span-4"><select class="select" id="manageUserScope"><option value="Operations" selected>Operations</option>${studies.map(s=>`<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('')}</select></div>
-            <div class="span-6"><input class="input" id="manageUserPassword" placeholder="Password" value="datamac" /></div>
-            <div class="span-6"><button class="btn primary" id="manageAddUser">Create account</button></div>
-          </div>
-        </div>
+      <div class="manage-tabs">
+        <button class="manage-tab ${currentPanel==='studies'?'active':''}" data-panel="studies">Studies / Projects</button>
+        <button class="manage-tab ${currentPanel==='users'?'active':''}" data-panel="users">Users / Active Directory</button>
       </div>
 
-      <div class="card" style="margin-top:14px">
-        <div class="h2">Active directory</div>
-        <div class="small" style="margin-top:4px">Current DataMac user accounts for testing.</div>
-        <table class="table" style="margin-top:12px">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Employee type</th><th>Scope</th></tr></thead>
-          <tbody>${users.map(u=>`<tr><td>${escapeHtml(u.fullName || u.display || u.email)}</td><td>${escapeHtml(u.email)}</td><td>${escapeHtml(u.role)}</td><td>${escapeHtml(getEmployeeType(u)==='study' ? 'Study / Project' : 'Operations')}</td><td>${escapeHtml(u.scope || '—')}</td></tr>`).join('')}</tbody>
-        </table>
+      <div class="manage-slider-shell">
+        <div class="manage-slider-track ${currentPanel==='users'?'show-users':''}" id="manageSliderTrack">
+          <section class="manage-slide">
+            <div class="manage-card-lite">
+              <div class="h2">Studies / Projects</div>
+              <div class="manage-inline">
+                <input class="input manage-name-input" id="newStudyName" placeholder="New study name" />
+                <button class="btn primary" id="addStudy">Add study</button>
+              </div>
+              <div class="hr"></div>
+              <table class="table">
+                <thead><tr><th>Name</th><th>Status</th><th>Created</th><th class="actions">Actions</th></tr></thead>
+                <tbody>
+                  ${studies.map(s=>`<tr data-id="${escapeHtml(s.id)}"><td><b>${escapeHtml(s.name)}</b></td><td>${escapeHtml(s.status)}</td><td>${escapeHtml(new Date(s.createdAt).toLocaleDateString())}</td><td class="actions"><button class="btn" data-act="rename">Rename</button><button class="btn" data-act="toggle">${s.status==='archived'?'Restore':'Archive'}</button></td></tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="manage-slide">
+            <div class="manage-card-lite">
+              <div class="h2">Add user account</div>
+              <div class="small" style="margin-top:4px">Enter a name. DataMac will generate a login account using @datamac.local and the default password datamac.</div>
+              <div class="manage-inline">
+                <input class="input manage-name-input" id="manageUserName" placeholder="Full name" />
+                <button class="btn primary" id="manageAddUser">Create account</button>
+              </div>
+            </div>
+
+            <div class="manage-card-lite" style="margin-top:14px">
+              <div class="h2">Active directory</div>
+              <div class="small" style="margin-top:4px">Edit role, employee type, and scope after creating the account.</div>
+              <table class="table" style="margin-top:12px">
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Employee type</th><th>Scope</th><th class="actions">Actions</th></tr></thead>
+                <tbody>
+                  ${users.map(u=>`<tr data-user-id="${escapeAttr(u.id)}">
+                    <td>${escapeHtml(u.fullName || u.display || u.email)}</td>
+                    <td>${escapeHtml(u.email)}</td>
+                    <td>
+                      <select class="ad-select" data-field="role">
+                        <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+                        <option value="managerial" ${u.role==='managerial'?'selected':''}>Managerial</option>
+                        <option value="regular" ${u.role==='regular'?'selected':''}>Regular user</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select class="ad-select" data-field="employeeType">
+                        <option value="ops" ${getEmployeeType(u)==='ops'?'selected':''}>Operations</option>
+                        <option value="study" ${getEmployeeType(u)==='study'?'selected':''}>Study / Project</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select class="ad-select" data-field="scope">
+                        <option value="Operations" ${String(u.scope||'')==='Operations'?'selected':''}>Operations</option>
+                        ${studies.map(s=>`<option value="${escapeHtml(s.name)}" ${String(u.scope||'')===String(s.name)?'selected':''}>${escapeHtml(s.name)}</option>`).join('')}
+                      </select>
+                    </td>
+                    <td class="actions"><div class="ad-actions"><button class="btn" data-save-user>Save</button>${u.id!=='owner' ? `<button class="btn danger" data-remove-user>Remove</button>` : ''}</div></td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   `;
+
+  document.querySelectorAll('.manage-tab').forEach(btn=>btn.addEventListener('click', ()=>{
+    state.managePanel = btn.getAttribute('data-panel');
+    renderManage();
+  }));
 
   document.getElementById('addStudy')?.addEventListener('click', ()=>{
     const name = (document.getElementById('newStudyName').value || '').trim();
     if(!name) return toast('Enter a study name.');
     addStudy(name);
     document.getElementById('newStudyName').value='';
+    state.managePanel = 'studies';
     renderManage();
   });
-  document.querySelectorAll('tbody tr').forEach(tr=>{
+
+  document.querySelectorAll('tr[data-id]').forEach(tr=>{
     const id = tr.getAttribute('data-id');
     tr.querySelectorAll('[data-act]').forEach(btn=>btn.addEventListener('click', ()=>{
       const act = btn.getAttribute('data-act');
@@ -2085,37 +2166,42 @@ function renderManage(){
       if(act==='toggle') return toggleArchiveStudy(id);
     }));
   });
-  const typeSel = document.getElementById('manageUserEmployeeType');
-  const scopeSel = document.getElementById('manageUserScope');
-  const resetScopeOptions = ()=>{
-    if(!typeSel || !scopeSel) return;
-    if(typeSel.value === 'ops'){
-      scopeSel.innerHTML = `<option value="Operations" selected>Operations</option>`;
-    }else{
-      scopeSel.innerHTML = `${studies.map(s=>`<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('')}`;
-    }
-  };
-  typeSel?.addEventListener('change', resetScopeOptions);
-  resetScopeOptions();
 
   document.getElementById('manageAddUser')?.addEventListener('click', ()=>{
     const fullName = (document.getElementById('manageUserName').value || '').trim();
-    const emailLocal = (document.getElementById('manageUserEmailLocal').value || '').trim().toLowerCase().replace(/@.*$/,'');
-    const email = emailLocal ? `${emailLocal}@datamac.local` : '';
-    const role = document.getElementById('manageUserRole').value;
-    const employeeType = document.getElementById('manageUserEmployeeType').value;
-    const workspace = employeeType;
-    const scope = (document.getElementById('manageUserScope').value || '').trim() || (employeeType==='ops' ? 'Operations' : '');
-    const password = (document.getElementById('manageUserPassword').value || '').trim() || TEST_PASSWORD;
-    if(!fullName || !emailLocal) return toast('Name and email username are required.');
-    if((store.users || []).some(u=>String(u.email).toLowerCase()===email)) return toast('Email already exists.');
-    const initials = fullName.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase() || 'U';
-    store.users.push({ id:'u_'+Math.random().toString(16).slice(2,8), email, password, role, employeeType, workspace, scope, display:fullName, fullName, initials });
-    saveStore();
+    if(!fullName) return toast('Name is required.');
+    const user = createUserFromName(fullName);
+    state.managePanel = 'users';
     renderManage();
-    toast('User account created.');
+    toast(`Account created: ${user.email}`);
+  });
+
+  document.querySelectorAll('tr[data-user-id]').forEach(tr=>{
+    tr.querySelector('[data-field="employeeType"]')?.addEventListener('change', (e)=>{
+      const scopeSel = tr.querySelector('[data-field="scope"]');
+      if(!scopeSel) return;
+      if(e.target.value === 'ops') scopeSel.value = 'Operations';
+      else if(scopeSel.value === 'Operations') scopeSel.value = (studies[0] ? studies[0].name : '');
+    });
+    tr.querySelector('[data-save-user]')?.addEventListener('click', ()=>{
+      const id = tr.getAttribute('data-user-id');
+      const u = (store.users||[]).find(x=>x.id===id);
+      if(!u) return;
+      u.role = tr.querySelector('[data-field="role"]').value;
+      u.employeeType = tr.querySelector('[data-field="employeeType"]').value;
+      u.workspace = u.employeeType;
+      u.scope = tr.querySelector('[data-field="scope"]').value || (u.employeeType==='ops' ? 'Operations' : '');
+      saveStore();
+      renderManage();
+      toast('Directory updated.');
+    });
+    tr.querySelector('[data-remove-user]')?.addEventListener('click', ()=>{
+      const id = tr.getAttribute('data-user-id');
+      removeUserAccount(id);
+    });
   });
 }
+
 
 function addStudy(name){
   const id = slugify(name) + '-' + Math.random().toString(16).slice(2,6);
@@ -2621,7 +2707,7 @@ function renderCharts(){
       </div>
 
       <div class="grid">
-        <div class="card span-4">
+        <div class="card span-3">
           <div class="h2">Dataset</div>
           <div class="small">Select a dataset to plot.</div>
           <div class="hr"></div>
@@ -2655,7 +2741,7 @@ function renderCharts(){
           </div>
         </div>
 
-        <div class="card span-8">
+        <div class="card span-9">
           <div class="h2">Preview</div>
           <div class="small">Rendered chart canvas.</div>
           <div class="hr"></div>
@@ -2694,6 +2780,7 @@ function renderCharts(){
     });
   });
 
+  fitCanvasToWrap('chartCanvas', 420);
   const canvas = document.getElementById('chartCanvas');
   const ctx = canvas?.getContext('2d');
   if(ctx) {
@@ -2727,6 +2814,7 @@ function renderCharts(){
     state.charts.yCol = y;
     state.charts.yCol2 = y2;
 
+    fitCanvasToWrap('chartCanvas', 420);
     const ctx2 = document.getElementById('chartCanvas').getContext('2d');
     const can = document.getElementById('chartCanvas');
     clearCanvas(ctx2, can);
@@ -2838,7 +2926,7 @@ function renderSummary(){
       </div>
 
       <div class="grid">
-        <div class="card span-4">
+        <div class="card span-3">
           <div class="h2">Dataset</div>
           <div class="small">Summaries are generated from datasets.</div>
           <div class="hr"></div>
@@ -3567,6 +3655,50 @@ function slugify(s){
     .slice(0,40) || 'study';
 }
 
+
+function nameToEmailLocal(fullName){
+  return String(fullName||'')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s]/g,'')
+    .replace(/\s+/g,'.')
+    .replace(/\.+/g,'.')
+    .replace(/^\.|\.$/g,'') || 'user';
+}
+
+function uniqueEmailForName(fullName){
+  const base = nameToEmailLocal(fullName);
+  let local = base;
+  let i = 2;
+  const exists = e => (store.users||[]).some(u=>String(u.email||'').toLowerCase()===e.toLowerCase());
+  while(exists(`${local}@datamac.local`)){
+    local = `${base}${i++}`;
+  }
+  return `${local}@datamac.local`;
+}
+
+function createUserFromName(fullName){
+  const email = uniqueEmailForName(fullName);
+  const initials = fullName.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase() || 'U';
+  const user = { id:'u_'+Math.random().toString(16).slice(2,8), email, password:TEST_PASSWORD, role:'regular', employeeType:'ops', workspace:'ops', scope:'Operations', display:fullName, fullName, initials };
+  store.users.push(user);
+  saveStore();
+  return user;
+}
+
+function removeUserAccount(id){
+  if(!canManage(state.user)) return toast('Only Owner/Admin can remove users.');
+  if(id === 'owner') return toast('The Owner account cannot be removed.');
+  if(state.user && state.user.id === id) return toast('You cannot remove your own active account.');
+  const idx = (store.users || []).findIndex(u=>u.id===id);
+  if(idx < 0) return;
+  const [removed] = store.users.splice(idx,1);
+  saveStore();
+  if(state.dataclub && state.dataclub.selected === id) state.dataclub.selected = (store.users[0] && store.users[0].id) || null;
+  renderManage();
+  toast(`Removed ${removed.fullName || removed.email}.`);
+}
+
 function sanitizeFolder(s){
   return String(s||'')
     .replace(/[\\/:*?"<>|]/g,'')
@@ -3617,6 +3749,50 @@ function fileToDataUrl(file){
   });
 }
 
+function getNotifications(){
+  const notes = [];
+  const pending = (store.pendingApprovals||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  pending.slice(0,5).forEach(item=>{
+    notes.push({title:'Approval pending', body:`${item.subject || item.fileName || 'Request'} is awaiting review.`, time:item.createdAt||Date.now(), action:()=>{ state.dataclub = state.dataclub || {}; state.dataclub.tab='pending'; navigate('dataclub'); closeNotifOverlay(); }});
+  });
+  (store.users||[]).slice(-5).reverse().forEach(u=>{
+    if(u.role==='owner') return;
+    notes.push({title:'User account ready', body:`${u.fullName || u.email} can sign in with ${u.email}.`, time:u.createdAt||Date.now(), action:()=>{ if(canManage(state.user)) navigate('manage'); closeNotifOverlay(); }});
+  });
+  (store.studies||[]).slice(-5).reverse().forEach(s=>{
+    notes.push({title:'Study available', body:`${s.name} is ${s.status}.`, time:s.createdAt||Date.now(), action:()=>{ state.activeStudyId=s.id; navigate('overview'); closeNotifOverlay(); }});
+  });
+  return notes.sort((a,b)=>(b.time||0)-(a.time||0)).slice(0,10);
+}
+function openSearchOverlay(){
+  const ov = document.getElementById('searchOverlay');
+  if(!ov) return;
+  ov.style.display='flex';
+  renderSearchResults();
+  setTimeout(()=>document.getElementById('searchInputModal')?.focus(),20);
+}
+function closeSearchOverlay(){ const ov=document.getElementById('searchOverlay'); if(ov) ov.style.display='none'; }
+function renderSearchResults(){
+  const q = String(document.getElementById('searchInputModal')?.value || '').trim().toLowerCase();
+  const resultsEl = document.getElementById('searchResults'); if(!resultsEl) return;
+  const nav = getNavForUser(state.user).map(n=>({title:n.label, sub:'Page', action:()=>{ navigate(n.key); closeSearchOverlay(); }}));
+  const studies = (store.studies||[]).filter(s=>s.status!=='deleted').map(s=>({title:s.name, sub:'Study / Project', action:()=>{ state.activeStudyId=s.id; navigate('overview'); closeSearchOverlay(); }}));
+  const users = (store.users||[]).filter(u=>u.role!=='owner').map(u=>({title:u.fullName||u.email, sub:u.email, action:()=>{ if(state.user && (state.view==='dataclub' || getNavForUser(state.user).some(x=>x.key==='dataclub'))){ navigate('dataclub'); } closeSearchOverlay(); }}));
+  const all = [...nav, ...studies, ...users].filter(r=>!q || `${r.title} ${r.sub}`.toLowerCase().includes(q)).slice(0,12);
+  resultsEl.innerHTML = all.length ? all.map((r,i)=>`<button class="search-result" data-search-idx="${i}"><span><b>${escapeHtml(r.title)}</b><div class="small">${escapeHtml(r.sub)}</div></span><span class="small">Open</span></button>`).join('') : `<div class="notif-item">No matching results.</div>`;
+  resultsEl.querySelectorAll('[data-search-idx]').forEach((btn,i)=>btn.addEventListener('click', ()=>all[i].action()));
+}
+function openNotifOverlay(){
+  const ov = document.getElementById('notifOverlay');
+  const list = document.getElementById('notifList');
+  if(!ov || !list) return;
+  const notes = getNotifications();
+  list.innerHTML = notes.length ? notes.map((n,i)=>`<button class="notif-item" data-note-idx="${i}" style="text-align:left"><div style="font-weight:900">${escapeHtml(n.title)}</div><div class="small" style="margin-top:4px">${escapeHtml(n.body)}</div><div class="small" style="margin-top:6px">${escapeHtml(timeAgo(n.time))}</div></button>`).join('') : `<div class="notif-item">No notifications yet.</div>`;
+  list.querySelectorAll('[data-note-idx]').forEach((btn,i)=>btn.addEventListener('click', ()=> notes[i].action && notes[i].action()));
+  ov.style.display='flex';
+}
+function closeNotifOverlay(){ const ov=document.getElementById('notifOverlay'); if(ov) ov.style.display='none'; }
+
 function initAIWidget(){
   const fab = document.getElementById('aiFab');
   const panel = document.getElementById('aiWidget');
@@ -3664,5 +3840,34 @@ function initAIWidget(){
 
 document.addEventListener('DOMContentLoaded', boot);
 </script>
+
+<div id="searchOverlay" class="search-overlay">
+  <div class="search-panel">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div>
+        <div class="h2">Search DataMac</div>
+        <div class="small">Find pages, studies, and users.</div>
+      </div>
+      <button class="btn" id="searchCloseBtn">Close</button>
+    </div>
+    <div class="card" style="margin-top:12px;padding:10px 12px;background:rgba(255,255,255,.03)">
+      <input id="searchInputModal" class="input" placeholder="Search pages, studies, users..." />
+    </div>
+    <div id="searchResults" class="search-results"></div>
+  </div>
+</div>
+<div id="notifOverlay" class="notif-overlay">
+  <div class="notif-panel">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div>
+        <div class="h2">Notifications</div>
+        <div class="small">Recent approvals, users, studies, and system events.</div>
+      </div>
+      <button class="btn" id="notifCloseBtn">Close</button>
+    </div>
+    <div id="notifList" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
+  </div>
+</div>
+
 </body>
 </html>
