@@ -480,6 +480,9 @@ body{
 .manage-inline{position:relative;display:block;margin-top:12px;max-width:980px}
 .manage-inline .input{width:100%;padding-right:180px}
 .manage-inline .btn{position:absolute;right:0;top:0;height:100%;min-width:164px;border-top-left-radius:0;border-bottom-left-radius:0}
+.profile-grid-clean{grid-template-columns:minmax(0,1fr) !important;}
+.file-shell .row.top-metadata{flex-wrap:wrap;gap:10px;}
+
 .search-overlay{position:fixed;inset:0;background:rgba(2,8,20,.12);display:none;align-items:flex-start;justify-content:center;z-index:90;padding-top:86px}
 .search-shell{width:min(760px,calc(100vw - 40px));display:flex;flex-direction:column;align-items:center;pointer-events:none}
 .search-animbar{pointer-events:auto;width:32px;height:46px;opacity:.25;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:18px;font-weight:600;letter-spacing:.01em;transition:width .34s cubic-bezier(.2,.9,.2,1),opacity .24s ease,transform .24s ease;border-radius:16px;transform:translateY(4px)}
@@ -763,7 +766,7 @@ function boot(){
   initAIWidget();
   document.getElementById('topSearchBtn')?.addEventListener('click', openSearchOverlay);
   document.getElementById('topNotifyBtn')?.addEventListener('click', openNotifOverlay);
-  document.getElementById('topSettingsBtn')?.addEventListener('click', ()=> toast('Settings panel will be expanded next.'));
+  document.getElementById('topSettingsBtn')?.addEventListener('click', ()=>{ renderProfile(); setActive('profile'); });
   document.getElementById('notifCloseBtn')?.addEventListener('click', closeNotifOverlay);
   document.getElementById('searchOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='searchOverlay') closeSearchOverlay(); });
   document.getElementById('notifOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='notifOverlay') closeNotifOverlay(); });
@@ -2292,9 +2295,8 @@ function renderFiles(){
           <div class="h1">Files / Folders</div>
           <p class="p">OneDrive-style workspace for study files, folders, filters, search, favorites, and recycle handling.</p>
         </div>
-        <div class="row">
+        <div class="row top-metadata">
           <span class="chip">Context: <b style="color:var(--text)">${escapeHtml(s.name)}</b></span>
-          <span class="chip">Owner: <b style="color:var(--text)">${escapeHtml(state.user?.email || '—')}</b></span>
         </div>
       </div>
 
@@ -3007,23 +3009,20 @@ function renderSummary(){
 function renderProfile(){
   setContext('DataMac • Profile');
   const u = state.user;
+  const employeeLabel = (u.employeeType === 'study') ? 'Study / Project' : 'Operations';
+  const workspaceLabel = (u.employeeType === 'study') ? (u.scope || 'Assigned study') : 'Operations';
   el.content.innerHTML = `
     <div class="card">
       <div class="h1">Profile</div>
-      <p class="p">User profile shown for role-testing.</p>
-      <div class="grid">
-        <div class="card span-6">
-          <div class="h2">User</div>
+      <div class="grid profile-grid-clean">
+        <div class="card span-12">
+          <div class="h2">User information</div>
           <div class="hr"></div>
+          <div class="kv"><span>Full name</span><b>${escapeHtml(u.fullName || u.display || 'User')}</b></div>
           <div class="kv"><span>Email</span><b>${escapeHtml(u.email)}</b></div>
           <div class="kv"><span>Role</span><b>${escapeHtml(u.role)}</b></div>
-          <div class="kv"><span>Scope</span><b>${escapeHtml(u.scope)}</b></div>
-        </div>
-        <div class="card span-6">
-          <div class="h2">Test logins</div>
-          <div class="hr"></div>
-          <div class="kv"><span>Default password</span><b>${escapeHtml(TEST_PASSWORD)}</b></div>
-          ${(store.users || []).map(acc=>`<div class="kv"><span>${escapeHtml(acc.role)}</span><b>${escapeHtml(acc.email)}</b></div>`).join('')}
+          <div class="kv"><span>Employee type</span><b>${escapeHtml(employeeLabel)}</b></div>
+          <div class="kv"><span>${u.employeeType === 'study' ? 'Study' : 'Department'}</span><b>${escapeHtml(workspaceLabel)}</b></div>
         </div>
       </div>
 
